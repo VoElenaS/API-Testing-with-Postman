@@ -7,10 +7,10 @@
 	},
 	"item": [
 		{
-			"name": "Registration_Auth_Manage",
+			"name": "Authorization_Authentication",
 			"item": [
 				{
-					"name": "Registration_Status_Code_201",
+					"name": "Register_user_201",
 					"event": [
 						{
 							"listen": "test",
@@ -51,7 +51,6 @@
 									"  for (let i = 1; i < length; i++) {\r",
 									"    name += characters.charAt(Math.floor(Math.random() * characters.length));\r",
 									"  }\r",
-									"\r",
 									"  return name;\r",
 									"}\r",
 									"\r",
@@ -91,7 +90,8 @@
 									"// Log the generated values for debugging\r",
 									"console.log(\"Generated Name:\", pm.environment.get(\"randomName\"));\r",
 									"console.log(\"Generated Email:\", pm.environment.get(\"randomEmail\"));\r",
-									"console.log(\"Generated Password:\", pm.environment.get(\"randomPassword\"));"
+									"console.log(\"Generated Password:\", pm.environment.get(\"randomPassword\"));\r",
+									""
 								],
 								"type": "text/javascript",
 								"packages": {}
@@ -124,13 +124,13 @@
 					"response": []
 				},
 				{
-					"name": "Authorization_Status_Code_200",
+					"name": "Login_user_200",
 					"event": [
 						{
 							"listen": "test",
 							"script": {
 								"exec": [
-									"pm.test(\"Status code is 200\", function () {\r",
+									"pm.test(\"Status code is 200. the user is authorized.\", function () {\r",
 									"    pm.response.to.have.status(200);\r",
 									"});\r",
 									"\r",
@@ -198,13 +198,13 @@
 					"response": []
 				},
 				{
-					"name": "Promoted_Status_Code_200",
+					"name": "Promote_to_SuperAdmin_200",
 					"event": [
 						{
 							"listen": "test",
 							"script": {
 								"exec": [
-									"pm.test (\"Status code 200. The regular user Promoted\", function () {\r",
+									"pm.test (\"Status code is 200. The regular user is promoted\", function () {\r",
 									"   pm.response.to.have.status(200); \r",
 									"});"
 								],
@@ -216,7 +216,51 @@
 							"listen": "prerequest",
 							"script": {
 								"exec": [
-									""
+									"let access_token = pm.environment.get (\"access_token\");\r",
+									"let access_token_exp = false;\r",
+									"\r",
+									"if (access_token) {\r",
+									"    let payload = JSON.parse (atob(access_token.split(\".\")[1]));\r",
+									"    let currentTime=Math.floor(Date.now()/1000);\r",
+									"    istokenexp = currentTime >= payload.exp;\r",
+									"    console.log(payload, currentTime, istokenexp);\r",
+									"}\r",
+									"\r",
+									"if (!access_token || istokenexp) {\r",
+									"    console.log(\"Token is expired or missing. Fetching a new one.\");\r",
+									"   // console.log(\"Current base_url_users:\", pm.environment.get(\"base_url_users\"));\r",
+									"pm.sendRequest({\r",
+									"        url: pm.environment.get(\"base_url_users\") + \"/login/\",\r",
+									"        method: \"POST\",\r",
+									"        header: {\r",
+									"            \"Content-Type\": \"application/json\"\r",
+									"        },\r",
+									"        body: {\r",
+									"            mode: \"raw\",\r",
+									"            raw: JSON.stringify({\r",
+									"                //The email and password of the superAdmin should be stored here from the first execution\r",
+									"                //Before change their status in the database from false to true.\r",
+									"                email: pm.environment.get(\"a99o3ib@email.com\"), \r",
+									"                password: pm.environment.get(\"JM0L1scvGgUG8lrMWg%z)^o0m$PSPrnyYo\")\r",
+									"            })\r",
+									"        }\r",
+									"    }, function (err, res) {\r",
+									"        if (err) {\r",
+									"            console.error(\"Error fetching new access token:\", err);\r",
+									"            return;\r",
+									"        }\r",
+									"\r",
+									"        // Parse the response and set the new access token\r",
+									"        let response = res.json();\r",
+									"        if (response.access_token) {\r",
+									"            pm.environment.set(\"accessToken\", response.access_token);\r",
+									"            console.log(\"New Access Token fetched and saved:\", response.access_token);\r",
+									"        } else {\r",
+									"            console.error(\"Failed to fetch new access token. Response:\", response);\r",
+									"        }\r",
+									"    });\r",
+									"\r",
+									"}"
 								],
 								"type": "text/javascript",
 								"packages": {}
@@ -233,14 +277,14 @@
 							}
 						],
 						"url": {
-							"raw": "{{base_url_users}}/users/promote/844ebf59-5fad-4a28-9b88-2dc6e392d08a",
+							"raw": "{{base_url_users}}/users/promote/{{userID}}",
 							"host": [
 								"{{base_url_users}}"
 							],
 							"path": [
 								"users",
 								"promote",
-								"844ebf59-5fad-4a28-9b88-2dc6e392d08a"
+								"{{userID}}"
 							],
 							"query": [
 								{
@@ -254,7 +298,7 @@
 					"response": []
 				},
 				{
-					"name": "Users",
+					"name": "Retrieve_Users_200",
 					"event": [
 						{
 							"listen": "test",
@@ -338,7 +382,7 @@
 					"response": []
 				},
 				{
-					"name": "edit_user_data",
+					"name": "Update_All_User_Data_200",
 					"event": [
 						{
 							"listen": "prerequest",
@@ -396,7 +440,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"name\": \"111111\",\r\n  \"email\": \"ttttttttttttytytty.yyyyyyyyyyyyyyyyyyyyyyyyyyytttttttttttttttttt@elenachangetest.testttttttt\"\r\n}\r\n",
+							"raw": "{\r\n  \"name\": \"{{randomNewName}}\",\r\n  \"email\": \"{{randomNewEmail}}\"\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -418,7 +462,24 @@
 					"response": []
 				},
 				{
-					"name": "Delete_user",
+					"name": "Delete_User_By_ID_200",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200. The User is successfully deleted\", function () {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disabledSystemHeaders": {}
+					},
 					"request": {
 						"method": "DELETE",
 						"header": [
@@ -429,21 +490,21 @@
 							}
 						],
 						"url": {
-							"raw": "{{base_url_users}}/users/delete/{{User_ID}}",
+							"raw": "{{base_url_users}}/users/delete/{{userID}}",
 							"host": [
 								"{{base_url_users}}"
 							],
 							"path": [
 								"users",
 								"delete",
-								"{{User_ID}}"
+								"{{userID}}"
 							]
 						}
 					},
 					"response": []
 				},
 				{
-					"name": "Delete_user_Status_Code_401",
+					"name": "Delete_User_By_ID_Unauthorized_401",
 					"event": [
 						{
 							"listen": "prerequest",
@@ -494,7 +555,21 @@
 					"response": []
 				},
 				{
-					"name": "pendingProducts",
+					"name": "Retrieve_Pending_Products_200",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200. The process is finished successfully\", function () {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
 					"request": {
 						"method": "GET",
 						"header": [
@@ -525,7 +600,7 @@
 			"name": "token",
 			"item": [
 				{
-					"name": "Retrieve Token for Existing User",
+					"name": "Retrieve_User_Token_200",
 					"event": [
 						{
 							"listen": "test",
@@ -564,1304 +639,13 @@
 			"name": "Product Management",
 			"item": [
 				{
-					"name": "Create_product",
-					"item": [
-						{
-							"name": "Product_creation_mandatory_fields_Statis_code_201",
-							"event": [
-								{
-									"listen": "prerequest",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								},
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test(\"Status code is 201. Product was created.\", function () {\r",
-											"    pm.response.to.have.status(201);\r",
-											"});\r",
-											"\r",
-											"const productId = pm.response.json().product_id;  // Assuming product_id is in the response body\r",
-											"pm.environment.set(\"product_id\", productId);\r",
-											"\r",
-											""
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								}
-							],
-							"request": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Authorization",
-										"value": "bearer {{accessToken}}",
-										"type": "text"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\r\n  \"name\": \"{{name_product}}\", // Mandatory. 3-100 characters. Only letters and numbers.\r\n  \"price\": {{Price_product}}, // Mandatory. Positive number, 2 decimals (e.g., 20.00). Max 10 digits including decimals.\r\n  \"stock_quantity\": {{quantity_product}}, // Mandatory. Whole number, at least 0.\r\n  \"supplier_id\": \"{{supplierID}}\" // Mandatory. Valid UUID. Must match an existing supplier ID in the database.\r\n}",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "http://localhost:8002/products/",
-									"protocol": "http",
-									"host": [
-										"localhost"
-									],
-									"port": "8002",
-									"path": [
-										"products",
-										""
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Product_creation_mandatory_fields_Statis_code_201_TEST_DATA",
-							"event": [
-								{
-									"listen": "prerequest",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								},
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test(\"Status code is 201. Product was created.\", function () {\r",
-											"    pm.response.to.have.status(201);\r",
-											"});\r",
-											"\r",
-											"const productId = pm.response.json().product_id;  // Assuming product_id is in the response body\r",
-											"pm.environment.set(\"product_id\", productId);\r",
-											"\r",
-											""
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								}
-							],
-							"request": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Authorization",
-										"value": "bearer {{accessToken}}",
-										"type": "text"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\r\n  \"name\": \"{{name_product}}\", // Mandatory. 3-100 characters. Only letters and numbers.\r\n  \"price\": {{Price_product}}, // Mandatory. Positive number, 2 decimals (e.g., 20.00). Max 10 digits including decimals.\r\n  \"stock_quantity\": 0,\r\n  \"supplier_id\": \"{{supplierID}}\" // Mandatory. Valid UUID. Must match an existing supplier ID in the database.\r\n}",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "http://localhost:8002/products/",
-									"protocol": "http",
-									"host": [
-										"localhost"
-									],
-									"port": "8002",
-									"path": [
-										"products",
-										""
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Product_creation_opt&mand_fields Copy_201",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test(\"Status code is 201. The product was created.\", function () {\r",
-											"    pm.response.to.have.status(201);\r",
-											"});\r",
-											"\r",
-											"const productId = pm.response.json().product_id;  // Assuming product_id is in the response body\r",
-											"pm.environment.set(\"product_id\", productId);"
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								},
-								{
-									"listen": "prerequest",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								}
-							],
-							"request": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Authorization",
-										"value": "Bearer {{accessToken}}",
-										"type": "text"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\r\n  \"name\": \"{{name_product}}\", // Mandatory. 3-100 characters. Only letters and numbers.\r\n  \"description\": \"{{description_product}}\", // Optional. Up to 500 characters. No restrictions on symbols.\r\n  \"category\": \"{{category_product}}\", // Optional. Up to 50 characters. Only letters and numbers.\r\n  \"price\": \"200.222\", // Mandatory. Positive number, 2 decimals (e.g., 20.00). Max 10 digits including decimals.\r\n  \"stock_quantity\": {{quantity_product}}, // Mandatory. Whole number, at least 0.\r\n  \"supplier_id\": \"{{supplierID}}\", // Mandatory. Valid UUID. Must match an existing supplier ID in the database.\r\n  \"image_url\": \"{{url_product}}\", // Optional. Max 255 characters. Formats: png, jpeg, jpg. Stored as a URL.\r\n  \"weight\": \"tr\", // Optional. Positive number with a decimal point. Max 6 digits (2 decimals).\r\n  \"dimensions\": \"{{dimensions_product}}\", // Optional. Max 100 characters. Whole numbers and the symbol \"x\" allowed.\r\n  \"manufacturer\": \"{{manufacturer_product}}\" // Optional. Max 100 characters. Only letters and numbers.\r\n}",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "{{base_url_products}}/products/",
-									"host": [
-										"{{base_url_products}}"
-									],
-									"path": [
-										"products",
-										""
-									]
-								}
-							},
-							"response": []
-						}
-					],
-					"event": [
-						{
-							"listen": "prerequest",
-							"script": {
-								"type": "text/javascript",
-								"packages": {},
-								"exec": [
-									"function getRandomName () {\r",
-									"    const characters = \"qazwsxedcrfvtgbyhnujmikolp1234567890\";\r",
-									"    const letters = \"qazwsxedcrfvtgbyhnujmikolp\";\r",
-									"    const lenght = Math.floor((100 - 3 + 1) * Math.random()) + 3;\r",
-									"    let name_product = \"\";\r",
-									"\r",
-									"    name_product += letters.charAt(Math.floor(Math.random()*letters.length)).toUpperCase();\r",
-									"\r",
-									"    for (let i = 1; i < lenght; i++){\r",
-									"        name_product += characters.charAt(Math.floor(Math.random() * characters.length));        \r",
-									"    }\r",
-									"    return name_product;\r",
-									"}\r",
-									"\r",
-									"function getDescriptions () {\r",
-									"    const symbols = () => String.fromCharCode(Math.floor(Math.random() * (126 - 33 + 1)) + 33);\r",
-									"    const length = Math.floor(Math.random () * (500 - 1 + 1)) + 1;\r",
-									"    let description_product = \"\";\r",
-									"    for (let i = 0; i < length; i++){\r",
-									"        description_product += symbols();\r",
-									"    }\r",
-									"    return description_product = description_product.replace(/[\"\\\\{}[\\],:<>|/'^~`=()&]/g, \"\");\r",
-									"}\r",
-									"\r",
-									"function getCategory () {\r",
-									"    const length = Math.floor(Math.random() * (50 - 1 + 1)) + 1;\r",
-									"    const symbols = \"qazwsxedcrfvtgbyhnujikmolp1234567890\";\r",
-									"    let category_product = \"\";\r",
-									"    for (let i =0; i < length; i++){\r",
-									"        category_product += symbols.charAt(Math.floor (Math.random() * symbols.length));    \r",
-									"    }\r",
-									"    return category_product;\r",
-									"}\r",
-									"\r",
-									"function getPrice () {\r",
-									"    const length = Math.floor(Math.random() * (6 - 1 + 1))+1;\r",
-									"    const length2 = 2;\r",
-									"    const numbers = \"0123456789\";\r",
-									"    let Price_product = \"\";\r",
-									"    let Price_product2 = \"\";\r",
-									"     // Create the integer part (before the decimal point)\r",
-									"    for (let i = 0; i < length; i++) {\r",
-									"        // To avoid leading zeros, the first digit is from 1-9\r",
-									"        if (i === 0) {\r",
-									"            Price_product += numbers.charAt(Math.floor(Math.random() * 9) + 1); // Random from 1-9\r",
-									"        } else {\r",
-									"            Price_product += numbers.charAt(Math.floor(Math.random() * numbers.length)); // Random from 0-9\r",
-									"        }\r",
-									"    }\r",
-									"     for (let k=0; k < length2; k++) {\r",
-									"        Price_product2 += numbers.charAt(Math.floor(Math.random() * numbers.length));\r",
-									"    }\r",
-									"    return Price_product + '.' + Price_product2;\r",
-									"}\r",
-									"\r",
-									"function getQuantity() {\r",
-									"    const length = Math.floor(Math.random() * (6 - 1 + 1)) + 1; // Random length between 1 and 10\r",
-									"    const numbers = \"0123456789\";\r",
-									"    let quantity_product = \"\";\r",
-									"\r",
-									"    // If length is greater than 1, ensure the first digit is not '0'\r",
-									"    if (length === 1) {\r",
-									"        // For length 1, any digit is fine, including '0'\r",
-									"        quantity_product += numbers.charAt(Math.floor(Math.random() * numbers.length));\r",
-									"    } else {\r",
-									"        // For length > 1, the first digit must not be '0'\r",
-									"        quantity_product += numbers.charAt(Math.floor(Math.random() * 9) + 1); // Random from 1-9\r",
-									"\r",
-									"        // Add subsequent digits which can be any from 0-9\r",
-									"        for (let i = 1; i < length; i++) {\r",
-									"            quantity_product += numbers.charAt(Math.floor(Math.random() * numbers.length)); // Random from 0-9\r",
-									"        }\r",
-									"    }\r",
-									"\r",
-									"    return quantity_product;\r",
-									"}\r",
-									"\r",
-									"function GetUrlProduct () {\r",
-									"    const maxLength = 255;\r",
-									"    const BaseUrl = \"https://example.com/\";\r",
-									"    const extensions = [\"png\", \"jpeg\", \"jpg\"];\r",
-									"    const characters = \"zaqxswcdevfrbgtnhymjukilopZAQXSWCDEVFRBGTNHYMJUKILOP0123456789\";\r",
-									"\r",
-									"    const filenamelength = Math.floor (Math.random() * (maxLength - BaseUrl.length - 5)) + 1;\r",
-									"\r",
-									"    let filename = \"\";\r",
-									"\r",
-									"    for (let i=0; i < filenamelength; i++) {\r",
-									"        filename += characters.charAt(Math.floor (Math.random() * characters.length));\r",
-									"    }\r",
-									"\r",
-									"    const extension = extensions[Math.floor(Math.random() * extensions.length)];\r",
-									"\r",
-									"    const url_product = `${BaseUrl}${filename}.${extension}`;\r",
-									"\r",
-									"    if (url_product.length > maxLength) {\r",
-									"        return GetUrlProduct();\r",
-									"    }\r",
-									"    return url_product;\r",
-									"}\r",
-									"\r",
-									"function getWeigth () {\r",
-									"    const length = Math.floor(Math.random() * (4 - 1 + 1))+1;\r",
-									"    const length2 = 2;\r",
-									"    const numbers = \"123456789\";\r",
-									"    const numbers2 = \"0123456789\";\r",
-									"    let Weigth_product = \"\";\r",
-									"    let Weigth_product2 = \"\";\r",
-									"     \r",
-									"     // Create the integer part (before the decimal point)\r",
-									"    for (let i = 0; i < length; i++) {\r",
-									"  \r",
-									"            Weigth_product += numbers.charAt(Math.floor(Math.random() * numbers.length)); // Random from 1-9\r",
-									"        \r",
-									"    }\r",
-									"     for (let k=0; k < length2; k++) {\r",
-									"        Weigth_product2 += numbers2.charAt(Math.floor(Math.random() * numbers2.length));\r",
-									"    }\r",
-									"    return Weigth_product + '.' + Weigth_product2;\r",
-									"}\r",
-									"\r",
-									"function getDimensions() {\r",
-									"    const numbers = \"123456789\"; // Avoid leading zero\r",
-									"    const allNumbers = \"0123456789\";\r",
-									"\r",
-									"    // Ensure three non-zero lengths\r",
-									"    let length1 = Math.floor(Math.random() * 3) + 1; // At least 1 digit\r",
-									"    let length2 = Math.floor(Math.random() * 3) + 1; \r",
-									"    let length3 = Math.floor(Math.random() * 3) + 1;\r",
-									"\r",
-									"    let part1 = numbers.charAt(Math.floor(Math.random() * numbers.length)); // First digit non-zero\r",
-									"    for (let i = 1; i < length1; i++) {\r",
-									"        part1 += allNumbers.charAt(Math.floor(Math.random() * allNumbers.length));\r",
-									"    }\r",
-									"\r",
-									"    let part2 = numbers.charAt(Math.floor(Math.random() * numbers.length));\r",
-									"    for (let i = 1; i < length2; i++) {\r",
-									"        part2 += allNumbers.charAt(Math.floor(Math.random() * allNumbers.length));\r",
-									"    }\r",
-									"\r",
-									"    let part3 = numbers.charAt(Math.floor(Math.random() * numbers.length));\r",
-									"    for (let i = 1; i < length3; i++) {\r",
-									"        part3 += allNumbers.charAt(Math.floor(Math.random() * allNumbers.length));\r",
-									"    }\r",
-									"\r",
-									"    return `${part1}x${part2}x${part3}`;\r",
-									"}\r",
-									"\r",
-									"function getManufacturer () {\r",
-									"    const length = Math.floor(Math.random() * (100)) + 1;\r",
-									"    const characters = \"qazwsxedcrfvtgbyhnujikmolp1234567890\";\r",
-									"    let manufacturer_product = \"\";\r",
-									"    for (let i =0; i < length; i++){\r",
-									"        manufacturer_product += characters.charAt(Math.floor (Math.random() * characters.length));    \r",
-									"    }\r",
-									"    return manufacturer_product;\r",
-									"}\r",
-									"\r",
-									"pm.environment.set(\"name_product\", getRandomName());\r",
-									"const name_product = pm.environment.get (\"name_product\");\r",
-									"\r",
-									"pm.environment.set(\"description_product\", getDescriptions());\r",
-									"const description = pm.environment.get (\"description_product\");\r",
-									"\r",
-									"pm.environment.set(\"category_product\", getCategory());\r",
-									"const category_product = pm.environment.get (\"category_product\");\r",
-									"\r",
-									"pm.environment.set(\"Price_product\", getPrice());\r",
-									"const Price_product = pm.environment.get (\"Price_product\");\r",
-									"\r",
-									"pm.environment.set(\"quantity_product\", getQuantity());\r",
-									"const quantity_product = pm.environment.get (\"quantity_product\");\r",
-									"\r",
-									"pm.environment.set(\"url_product\", GetUrlProduct());\r",
-									"const url_product = pm.environment.get (\"url_product\");\r",
-									"\r",
-									"pm.environment.set(\"Weigth_product\", getWeigth());\r",
-									"const Weigth_product = pm.environment.get (\"Weigth_product\");\r",
-									"\r",
-									"pm.environment.set(\"dimensions_product\", getDimensions());\r",
-									"const dimensions_product = pm.environment.get (\"dimensions_product\");\r",
-									"\r",
-									"pm.environment.set(\"manufacturer_product\", getManufacturer());\r",
-									"const manufacturer_product = pm.environment.get (\"manufacturer_product\");"
-								]
-							}
-						},
-						{
-							"listen": "test",
-							"script": {
-								"type": "text/javascript",
-								"packages": {},
-								"exec": [
-									""
-								]
-							}
-						}
-					]
-				},
-				{
-					"name": "Retrieve_products",
-					"item": [
-						{
-							"name": "Retrieving_all_Products",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test(\"Status code is 200. The products was retrieved.\", function () {\r",
-											"    pm.response.to.have.status(200);\r",
-											"});\r",
-											"\r",
-											"const productId = pm.response.json().product_id;  // Assuming product_id is in the response body\r",
-											"pm.environment.set(\"product_id\", productId);\r",
-											"\r",
-											""
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								}
-							],
-							"request": {
-								"method": "GET",
-								"header": [
-									{
-										"key": "Authorization",
-										"value": "Bearer {{accessToken}}",
-										"type": "text"
-									}
-								],
-								"url": {
-									"raw": "{{base_url_products}}/products/",
-									"host": [
-										"{{base_url_products}}"
-									],
-									"path": [
-										"products",
-										""
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Retrieving_product_by_name",
-							"event": [
-								{
-									"listen": "prerequest",
-									"script": {
-										"exec": [
-											"\r",
-											"\r",
-											""
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								},
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test(\"Status code is 200. The product by name was retrieved.\", function () {\r",
-											"    pm.response.to.have.status(200);\r",
-											"});\r",
-											"\r",
-											"const productId = pm.response.json().product_id;  // Assuming product_id is in the response body\r",
-											"pm.environment.set(\"product_id\", productId);"
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								}
-							],
-							"request": {
-								"method": "GET",
-								"header": [
-									{
-										"key": "Authorization",
-										"value": "Bearer {{accessToken}}",
-										"type": "text"
-									},
-									{
-										"key": "",
-										"value": "",
-										"type": "text",
-										"disabled": true
-									}
-								],
-								"url": {
-									"raw": "{{base_url_products}}/search_products/?name={{name_product}}",
-									"host": [
-										"{{base_url_products}}"
-									],
-									"path": [
-										"search_products",
-										""
-									],
-									"query": [
-										{
-											"key": "name",
-											"value": "{{name_product}}"
-										}
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Retrieving_Product_by_ID",
-							"event": [
-								{
-									"listen": "prerequest",
-									"script": {
-										"exec": [
-											"\r",
-											""
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								},
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test(\"Status code is 200. The product by ID was retrieved.\", function () {\r",
-											"    pm.response.to.have.status(200);\r",
-											"});\r",
-											"\r",
-											"const productId = pm.response.json().product_id;  // Assuming product_id is in the response body\r",
-											"pm.environment.set(\"product_id\", productId);"
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								}
-							],
-							"request": {
-								"method": "GET",
-								"header": [
-									{
-										"key": "Authorization",
-										"value": "Bearer {{accessToken}}",
-										"type": "text"
-									}
-								],
-								"url": {
-									"raw": "http://localhost:8002/products/{{product_id}}",
-									"protocol": "http",
-									"host": [
-										"localhost"
-									],
-									"port": "8002",
-									"path": [
-										"products",
-										"{{product_id}}"
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Retrieving_Product_by_ID 404",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test(\"Status code is 404. The product not found.\", function () {\r",
-											"    pm.response.to.have.status(404);\r",
-											"});\r",
-											"\r",
-											"const productId = pm.response.json().product_id;  // Assuming product_id is in the response body\r",
-											"pm.environment.set(\"product_id\", productId);"
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								}
-							],
-							"request": {
-								"method": "GET",
-								"header": [
-									{
-										"key": "Authorization",
-										"value": "Bearer {{accessToken}}",
-										"type": "text"
-									}
-								],
-								"url": {
-									"raw": "http://localhost:8002/products/be53c59f-c7c7-434f-a8e9-960adc208419",
-									"protocol": "http",
-									"host": [
-										"localhost"
-									],
-									"port": "8002",
-									"path": [
-										"products",
-										"be53c59f-c7c7-434f-a8e9-960adc208419"
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Retrieving_Product_by_ID 400",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test (\"Invalid product_id. Status code is 400\", function () {\r",
-											"    pm.response.to.have.status(400);\r",
-											"});"
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								}
-							],
-							"request": {
-								"method": "GET",
-								"header": [
-									{
-										"key": "Authorization",
-										"value": "Bearer {{accessToken}}",
-										"type": "text"
-									}
-								],
-								"url": {
-									"raw": "http://localhost:8002/products/null",
-									"protocol": "http",
-									"host": [
-										"localhost"
-									],
-									"port": "8002",
-									"path": [
-										"products",
-										"null"
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Retrieving_Product_by_ID 401",
-							"event": [
-								{
-									"listen": "prerequest",
-									"script": {
-										"exec": [
-											"pm.test (\"Invalid token or unauthorized access. Status code is 401\", function () {\r",
-											"    pm.response.to.have.status(401);\r",
-											"});"
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								}
-							],
-							"request": {
-								"method": "GET",
-								"header": [
-									{
-										"key": "Authorization",
-										"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0Njg3ZDRhOC0wNmU5LTRmNzMtYjdkMy1lMzgwMjc4NDhmODgiLCJpc19zdXBlcmFkbWluIjpmYWxzZSwiZXhwIjoxNzMxMzM3MDEyfQ.h02FAUz4WIx46pxrvQJWI0NJmO0ZpTfacLsEWH24BA8",
-										"type": "text"
-									}
-								],
-								"url": {
-									"raw": "http://localhost:8002/products/{{product_id}}",
-									"protocol": "http",
-									"host": [
-										"localhost"
-									],
-									"port": "8002",
-									"path": [
-										"products",
-										"{{product_id}}"
-									]
-								}
-							},
-							"response": []
-						}
-					]
-				},
-				{
-					"name": "Update_product",
-					"item": [
-						{
-							"name": "Product Update with empty optional fields",
-							"event": [
-								{
-									"listen": "prerequest",
-									"script": {
-										"exec": [
-											"function getNewRandomName() {\r",
-											"    const characters = \"qazwsxedcrfvtgbyhnujmikolp1234567890\";\r",
-											"    const lenght = Math.floor((100 - 3 + 1) * Math.random()) + 3;\r",
-											"    let New_name_product = \"\";\r",
-											"    for (let i = 0; i < lenght; i++) {\r",
-											"        New_name_product += characters.charAt(Math.floor(Math.random() * characters.length));\r",
-											"    }\r",
-											"    return New_name_product.charAt(0).toUpperCase() + New_name_product.slice(1);\r",
-											"}\r",
-											"\r",
-											"function getNewDescriptions() {\r",
-											"    const symbols = () => String.fromCharCode(Math.floor(Math.random() * (126 - 33 + 1)) + 33);\r",
-											"    const length = Math.floor(Math.random() * (500 - 1 + 1)) + 1;\r",
-											"    let New_description_product = \"\";\r",
-											"    for (let i = 0; i < length; i++) {\r",
-											"        New_description_product += symbols();\r",
-											"    }\r",
-											"    return New_description_product.replace(/[\"\\\\{}[\\],:<>|/'^~`=()&]/g, \"\");\r",
-											"}\r",
-											"\r",
-											"function getNewCategory() {\r",
-											"    const length = Math.floor(Math.random() * (50 - 1 + 1)) + 1;\r",
-											"    const symbols = \"qazwsxedcrfvtgbyhnujikmolp1234567890\";\r",
-											"    let New_category_product = \"\";\r",
-											"    for (let i = 0; i < length; i++) {\r",
-											"        New_category_product += symbols.charAt(Math.floor(Math.random() * symbols.length));\r",
-											"    }\r",
-											"    return New_category_product;\r",
-											"}\r",
-											"\r",
-											"function getNewPrice() {\r",
-											"    const length = Math.floor(Math.random() * (6 - 1 + 1)) + 1;\r",
-											"    const length2 = 2;\r",
-											"    const numbers = \"0123456789\";\r",
-											"    let New_Price_product = \"\";\r",
-											"    let New_Price_product2 = \"\";\r",
-											"    for (let i = 0; i < length; i++) {\r",
-											"        if (i === 0) {\r",
-											"            New_Price_product += numbers.charAt(Math.floor(Math.random() * 9) + 1);\r",
-											"        } else {\r",
-											"            New_Price_product += numbers.charAt(Math.floor(Math.random() * numbers.length));\r",
-											"        }\r",
-											"    }\r",
-											"    for (let k = 0; k < length2; k++) {\r",
-											"        New_Price_product2 += numbers.charAt(Math.floor(Math.random() * numbers.length));\r",
-											"    }\r",
-											"    return New_Price_product + '.' + New_Price_product2;\r",
-											"}\r",
-											"\r",
-											"function getNewQuantity() {\r",
-											"    const length = Math.floor(Math.random() * (6 - 1 + 1)) + 1;\r",
-											"    const numbers = \"0123456789\";\r",
-											"    let New_quantity_product = \"\";\r",
-											"    if (length === 1) {\r",
-											"        New_quantity_product += numbers.charAt(Math.floor(Math.random() * numbers.length));\r",
-											"    } else {\r",
-											"        New_quantity_product += numbers.charAt(Math.floor(Math.random() * 9) + 1);\r",
-											"        for (let i = 1; i < length; i++) {\r",
-											"            New_quantity_product += numbers.charAt(Math.floor(Math.random() * numbers.length));\r",
-											"        }\r",
-											"    }\r",
-											"    return New_quantity_product;\r",
-											"}\r",
-											"\r",
-											"function getNewUrlProduct() {\r",
-											"    const maxLength = 255;\r",
-											"    const BaseUrl = \"https://example.com/\";\r",
-											"    const extensions = [\"png\", \"jpeg\", \"jpg\"];\r",
-											"    const characters = \"zaqxswcdevfrbgtnhymjukilopZAQXSWCDEVFRBGTNHYMJUKILOP0123456789\";\r",
-											"    const filenamelength = Math.floor(Math.random() * (maxLength - BaseUrl.length - 5)) + 1;\r",
-											"    let New_filename = \"\";\r",
-											"    for (let i = 0; i < filenamelength; i++) {\r",
-											"        New_filename += characters.charAt(Math.floor(Math.random() * characters.length));\r",
-											"    }\r",
-											"    const extension = extensions[Math.floor(Math.random() * extensions.length)];\r",
-											"    const New_url_product = `${BaseUrl}${New_filename}.${extension}`;\r",
-											"    if (New_url_product.length > maxLength) {\r",
-											"        return getNewUrlProduct();\r",
-											"    }\r",
-											"    return New_url_product;\r",
-											"}\r",
-											"\r",
-											"function getNewWeigth() {\r",
-											"    const length = Math.floor(Math.random() * (4 - 1 + 1)) + 1;\r",
-											"    const length2 = 2;\r",
-											"    const numbers = \"123456789\";\r",
-											"    const numbers2 = \"0123456789\";\r",
-											"    let New_Weigth_product = \"\";\r",
-											"    let New_Weigth_product2 = \"\";\r",
-											"    for (let i = 0; i < length; i++) {\r",
-											"        New_Weigth_product += numbers.charAt(Math.floor(Math.random() * numbers.length));\r",
-											"    }\r",
-											"    for (let k = 0; k < length2; k++) {\r",
-											"        New_Weigth_product2 += numbers2.charAt(Math.floor(Math.random() * numbers2.length));\r",
-											"    }\r",
-											"    return New_Weigth_product + '.' + New_Weigth_product2;\r",
-											"}\r",
-											"\r",
-											"function getNewDimensions() {\r",
-											"    const length1 = Math.floor(Math.random() * (96)) + 1;\r",
-											"    const length2 = Math.floor(Math.random() * (100 - length1 - 2)) + 1;\r",
-											"    const lenght3 = 100 - length1 - length2 - 2;\r",
-											"    const numbers = \"0123456789\";\r",
-											"    let New_part1 = \"\";\r",
-											"    let New_part2 = \"\";\r",
-											"    let New_part3 = \"\";\r",
-											"    for (let i = 0; i < length1; i++) {\r",
-											"        New_part1 += numbers.charAt(Math.floor(Math.random() * numbers.length));\r",
-											"    }\r",
-											"    if (New_part1[0] === 0 && length1 > 1) {\r",
-											"        New_part1 = New_part1.replace('0', Math.floor(Math.random() * 9) + 1);\r",
-											"    }\r",
-											"    for (let i = 0; i < length2; i++) {\r",
-											"        New_part2 += numbers.charAt(Math.floor(Math.random() * numbers.length));\r",
-											"    }\r",
-											"    if (New_part2[0] === 0 && length2 > 1) {\r",
-											"        New_part2 = New_part2.replace('0', Math.floor(Math.random() * 9) + 1);\r",
-											"    }\r",
-											"    for (let i = 0; i < lenght3; i++) {\r",
-											"        New_part3 += numbers.charAt(Math.floor(Math.random() * numbers.length));\r",
-											"    }\r",
-											"    if (New_part3[0] === 0 && lenght3 > 1) {\r",
-											"        New_part3 = New_part3.replace('0', Math.floor(Math.random() * 9) + 1);\r",
-											"    }\r",
-											"    return New_part1 + 'x' + New_part2 + 'x' + New_part3;\r",
-											"}\r",
-											"\r",
-											"function getNewManufacturer() {\r",
-											"    const length = Math.floor(Math.random() * (100)) + 1;\r",
-											"    const characters = \"qazwsxedcrfvtgbyhnujikmolp1234567890\";\r",
-											"    let New_manufacturer_product = \"\";\r",
-											"    for (let i = 0; i < length; i++) {\r",
-											"        New_manufacturer_product += characters.charAt(Math.floor(Math.random() * characters.length));\r",
-											"    }\r",
-											"    return New_manufacturer_product;\r",
-											"}\r",
-											"\r",
-											"pm.environment.set(\"New_name_product\", getNewRandomName());\r",
-											"const New_name_product = pm.environment.get(\"New_name_product\");\r",
-											"console.log(New_name_product);\r",
-											"\r",
-											"pm.environment.set(\"New_description_product\", getNewDescriptions());\r",
-											"const New_description = pm.environment.get(\"New_description_product\");\r",
-											"console.log(New_description);\r",
-											"\r",
-											"pm.environment.set(\"New_category_product\", getNewCategory());\r",
-											"const New_category_product = pm.environment.get(\"New_category_product\");\r",
-											"\r",
-											"pm.environment.set(\"New_Price_product\", getNewPrice());\r",
-											"const New_Price_product = pm.environment.get(\"New_Price_product\");\r",
-											"\r",
-											"pm.environment.set(\"New_quantity_product\", getNewQuantity());\r",
-											"const New_quantity_product = pm.environment.get(\"New_quantity_product\");\r",
-											"\r",
-											"pm.environment.set(\"New_url_product\", getNewUrlProduct());\r",
-											"const New_url_product = pm.environment.get(\"New_url_product\");\r",
-											"\r",
-											"pm.environment.set(\"New_Weigth_product\", getNewWeigth());\r",
-											"const New_Weigth_product = pm.environment.get(\"New_Weigth_product\");\r",
-											"\r",
-											"pm.environment.set(\"New_dimensions_product\", getNewDimensions());\r",
-											"const New_dimensions_product = pm.environment.get(\"New_dimensions_product\");\r",
-											"\r",
-											"pm.environment.set(\"New_manufacturer_product\", getNewManufacturer());\r",
-											"const New_Newmanufacturer_product = pm.environment.get(\"New_manufacturer_product\");"
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								},
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test (\"Status code is 200 OK!\", function () {\r",
-											"    pm.response.to.have (200);\r",
-											"});\r",
-											"\r",
-											"const name_product = pm.environment.get (\"name_product\");"
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								}
-							],
-							"request": {
-								"method": "PUT",
-								"header": [
-									{
-										"key": "Authorization",
-										"value": "Bearer {{accessToken}}",
-										"type": "text"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\r\n  \"name\": \"{{New_name_product}}\",\r\n  \"description\": \"{{New_description_product}}\",\r\n  \"category\": \"{{New_category_product}}\",\r\n  \"price\": {{New_Price_product}},\r\n  \"stock_quantity\": {{New_quantity_product}},\r\n  \"supplier_id\": \"{{supplierID}}\",\r\n  \"image_url\": \"{{New_url_product}}\",\r\n  \"weight\": \"{{New_Weigth_product}}\",\r\n  \"dimensions\": \"{{New_dimensions_product}}\",\r\n  \"manufacturer\": \"{{New_manufacturer_product}}\"\r\n}",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "{{base_url_products}}/products/{{product_id}}",
-									"host": [
-										"{{base_url_products}}"
-									],
-									"path": [
-										"products",
-										"{{product_id}}"
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Product Update with mandatory",
-							"request": {
-								"method": "PUT",
-								"header": [
-									{
-										"key": "Authorization",
-										"value": "Bearer {{accessToken}}",
-										"type": "text"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\r\n  \"name\": \"{{name_product}}\",\r\n  \"price\": 50.26,\r\n  \"stock_quantity\": {{quantity_product}},\r\n  \"supplier_id\": \"{{supplierID}}\"  \r\n}\r\n",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "http://localhost:8002/products/{{product_id}}",
-									"protocol": "http",
-									"host": [
-										"localhost"
-									],
-									"port": "8002",
-									"path": [
-										"products",
-										"{{product_id}}"
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Product Update with empty body request",
-							"request": {
-								"method": "PUT",
-								"header": [
-									{
-										"key": "Authorization",
-										"value": "Bearer {{accessToken}}",
-										"type": "text"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\r\n  \"name\": \"test\",\r\n  \"description\": \"This is a description., A product description that fits within the 500 character limit. This description will be expanded to exactly 500 characters by adding additional filler text here. The aim is to reach the limit without going over, which will allow this description to be valid. This should now be exactly 500 characters long and fully comply with the constraints of the system. Let's keep going until we hit exactly 500. Done! This is exactly 500 characters now %, A product description that fi\",\r\n  \"category\": \"TEST\",\r\n  \"price\": 99.10,\r\n  \"stock_quantity\": 1,\r\n  \"supplier_id\": \"06a4e337-a7da-4e6b-b350-2eb7f6687237\",\r\n  \"image_url\": \"https://example.com/image.jpg\",\r\n  \"weight\": 100.00,\r\n \r\n  \"manufacturer\": \"111rr11111\"\r\n}",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "http://localhost:8002/products/{{product_id}}",
-									"protocol": "http",
-									"host": [
-										"localhost"
-									],
-									"port": "8002",
-									"path": [
-										"products",
-										"{{product_id}}"
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Product Update with missed mandatory filed",
-							"request": {
-								"method": "PUT",
-								"header": [
-									{
-										"key": "Authorization",
-										"value": "Bearer {{accessToken}}",
-										"type": "text"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\r\n  \"name\": \"test\",\r\n  \"description\": \"This is a description., A product description that fits within the 500 character limit. This description will be expanded to exactly 500 characters by adding additional filler text here. The aim is to reach the limit without going over, which will allow this description to be valid. This should now be exactly 500 characters long and fully comply with the constraints of the system. Let's keep going until we hit exactly 500. Done! This is exactly 500 characters now %, A product description that fi\",\r\n  \"category\": \"TEST\",\r\n  \"price\": 99.10,\r\n  \"stock_quantity\": 1,\r\n  \"supplier_id\": \"6cc42bc9-b8b7-4a1d-8535-2ba4af779a4d\",\r\n  \"image_url\": \"https://example.com/image.jpg\",\r\n  \"weight\": 100.00,\r\n  \"dimensions\": \"12345678901234567890123456789012345678902345678901234567890x1234567890123456789012345678901234567890\",\r\n  \"manufacturer\": \"111rr11111\"\r\n}",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "http://localhost:8002/products/{{product_id}}",
-									"protocol": "http",
-									"host": [
-										"localhost"
-									],
-									"port": "8002",
-									"path": [
-										"products",
-										"{{product_id}}"
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Product Update with product_id doesn't exist",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test(\"Status code is 404. The product not found.\", function () {\r",
-											"    pm.response.to.have.status(404);\r",
-											"});"
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								}
-							],
-							"request": {
-								"method": "PUT",
-								"header": [
-									{
-										"key": "Authorization",
-										"value": "Bearer {{accessToken}}",
-										"type": "text"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\r\n  \"name\": \"test\",\r\n  \"description\": \"This is a description., A product description that fits within the 500 character limit. This description will be expanded to exactly 500 characters by adding additional filler text here. The aim is to reach the limit without going over, which will allow this description to be valid. This should now be exactly 500 characters long and fully comply with the constraints of the system. Let's keep going until we hit exactly 500. Done! This is exactly 500 characters now %, A product description that fi\",\r\n  \"category\": \"TEST\",\r\n  \"price\": 99.10,\r\n  \"stock_quantity\": 1,\r\n  \"supplier_id\": \"6cc42bc9-b8b7-4a1d-8535-2ba4af779a4d\",\r\n  \"image_url\": \"https://example.com/image.jpg\",\r\n  \"weight\": 100.00,\r\n  \"dimensions\": \"12345678901234567890123456789012345678902345678901234567890x1234567890123456789012345678901234567890\",\r\n  \"manufacturer\": \"111rr11111\"\r\n}",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "http://localhost:8002/products/{{product_id}}",
-									"protocol": "http",
-									"host": [
-										"localhost"
-									],
-									"port": "8002",
-									"path": [
-										"products",
-										"{{product_id}}"
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Product Update with No valid Authorization token",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test (\"Invalid token or unauthorized access. Status code is 401\", function () {\r",
-											"    pm.response.to.have.status(401);\r",
-											"});"
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								}
-							],
-							"request": {
-								"method": "PUT",
-								"header": [
-									{
-										"key": "Authorization",
-										"value": "Bearer {{accessToken}}",
-										"type": "text"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\r\n  \"name\": \"test\",\r\n  \"description\": \"This is a description., A product description that fits within the 500 character limit. This description will be expanded to exactly 500 characters by adding additional filler text here. The aim is to reach the limit without going over, which will allow this description to be valid. This should now be exactly 500 characters long and fully comply with the constraints of the system. Let's keep going until we hit exactly 500. Done! This is exactly 500 characters now %, A product description that fi\",\r\n  \"category\": \"TEST\",\r\n  \"price\": 99.10,\r\n  \"stock_quantity\": 1,\r\n  \"supplier_id\": \"6cc42bc9-b8b7-4a1d-8535-2ba4af779a4d\",\r\n  \"image_url\": \"https://example.com/image.jpg\",\r\n  \"weight\": 100.00,\r\n  \"dimensions\": \"12345678901234567890123456789012345678902345678901234567890x1234567890123456789012345678901234567890\",\r\n  \"manufacturer\": \"111rr11111\"\r\n}",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "http://localhost:8002/products/{{product_id}}",
-									"protocol": "http",
-									"host": [
-										"localhost"
-									],
-									"port": "8002",
-									"path": [
-										"products",
-										"{{product_id}}"
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "is_available",
-							"request": {
-								"method": "PATCH",
-								"header": [
-									{
-										"key": "Authorization",
-										"value": "bearer {{accessToken}}",
-										"type": "text"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\r\n\r\n  \"is_available\": false\r\n}",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "{{base_url_products}}/products/{{product_id}}",
-									"host": [
-										"{{base_url_products}}"
-									],
-									"path": [
-										"products",
-										"{{product_id}}"
-									]
-								}
-							},
-							"response": []
-						}
-					]
-				},
-				{
-					"name": "Delete_product",
-					"item": [
-						{
-							"name": "Delete_product_200",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test (\"Status code is 200. The product was deleted.\", function(){\r",
-											"    pm.response.to.have.status(200);\r",
-											"});"
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								}
-							],
-							"request": {
-								"method": "DELETE",
-								"header": [
-									{
-										"key": "Authorization",
-										"value": "Bearer {{accessToken}}",
-										"type": "text"
-									}
-								],
-								"url": {
-									"raw": "http://localhost:8002/products/{{product_id}}",
-									"protocol": "http",
-									"host": [
-										"localhost"
-									],
-									"port": "8002",
-									"path": [
-										"products",
-										"{{product_id}}"
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Delete_product_401",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test (\"Status cide is 401. Invalid token or unauthorized access.\", function() {\r",
-											"    pm.response.to.have.status(401);\r",
-											"});"
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								}
-							],
-							"request": {
-								"method": "DELETE",
-								"header": [
-									{
-										"key": "Authorization",
-										"value": "bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmYWY2Nzk3NC0zNTUyLTQwOGUtODVlMi02ZWVlNTFkOWUxMzYiLCJpc19zdXBlcmFkbWluIjpmYWxzZSwiZXhwIjoxNzM3NzE5MzA1fQ.alooTAOt-oYATMSSWbCPX59NPK7lccIZqpjE_DT5Jbw",
-										"type": "text"
-									}
-								],
-								"url": {
-									"raw": "http://localhost:8002/products/{{product_id}}",
-									"protocol": "http",
-									"host": [
-										"localhost"
-									],
-									"port": "8002",
-									"path": [
-										"products",
-										"{{product_id}}"
-									],
-									"query": [
-										{
-											"key": "",
-											"value": null,
-											"disabled": true
-										}
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Delete_product_404",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test (\"Status code is 404. The product not found.\", function(){\r",
-											"    pm.response.to.have.status(404);\r",
-											"});"
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								}
-							],
-							"request": {
-								"method": "DELETE",
-								"header": [
-									{
-										"key": "Authorization",
-										"value": "Bearer {{accessToken}}",
-										"type": "text"
-									}
-								],
-								"url": {
-									"raw": "http://localhost:8002/products/739d5fdd-82fc-45c9-a2d2-f832c2b4c00e",
-									"protocol": "http",
-									"host": [
-										"localhost"
-									],
-									"port": "8002",
-									"path": [
-										"products",
-										"739d5fdd-82fc-45c9-a2d2-f832c2b4c00e"
-									],
-									"query": [
-										{
-											"key": "",
-											"value": null,
-											"disabled": true
-										}
-									]
-								}
-							},
-							"response": []
-						}
-					]
-				},
-				{
 					"name": "WareHouses",
 					"item": [
 						{
 							"name": "Create_Warehous",
 							"item": [
 								{
-									"name": "WEREHOUSE_Creation_all_fields",
+									"name": "Create_warehouse_all_fields_200",
 									"event": [
 										{
 											"listen": "test",
@@ -1917,73 +701,7 @@
 									"response": []
 								},
 								{
-									"name": "WEREHOUSE_Creation_all_fields for TEST",
-									"event": [
-										{
-											"listen": "test",
-											"script": {
-												"exec": [
-													"pm.test (\"The warehouse was created. Status cide 200\", function(){\r",
-													"    pm.response.to.have.status(200)\r",
-													"\r",
-													"});\r",
-													"\r",
-													"const warehouseId = pm.response.json().warehouse_id;\r",
-													"\r",
-													"pm.environment.set (\"warehouseId\", warehouseId);\r",
-													"\r",
-													"console.log (\"warehouse_id: \", warehouseId);"
-												],
-												"type": "text/javascript",
-												"packages": {}
-											}
-										},
-										{
-											"listen": "prerequest",
-											"script": {
-												"exec": [
-													""
-												],
-												"type": "text/javascript",
-												"packages": {}
-											}
-										}
-									],
-									"request": {
-										"method": "POST",
-										"header": [
-											{
-												"key": "Authorization",
-												"value": "bearer {{accessToken}}",
-												"type": "text"
-											}
-										],
-										"body": {
-											"mode": "raw",
-											"raw": "{\r\n  \"location\": \"{{location}}\",\r\n  // Warehouse Location:\r\n  // - Required field\r\n  // - Maximum length: 255 characters\r\n  // - No restrictions on input values\r\n  // - Must be unique (duplicate locations return a 422 error)\r\n\r\n  \"manager_name\": \"{{manager_name}}\",\r\n  // Warehouse Manager Name:\r\n  // - Optional field\r\n  // - Maximum length: 100 characters\r\n  // - Can contain only letters\r\n\r\n  \"capacity\": \"{{capacity}}\",\r\n  // Warehouse Capacity:\r\n  // - Required field\r\n  // - Must be a positive number representing the maximum volume in cubic meters\r\n  // - Input should be greater than 0\r\n\r\n  \"current_stock\": \"{{current_stock}}\",\r\n  // Current Stock:\r\n  // - Auto-filled with a default value of 0\r\n  // - Must be a whole number, not less than 0, representing the count of product items in the warehouse\r\n\r\n  \"contact_number\": \"{{contact_number}}\",\r\n  // Warehouse Contact Number:\r\n  // - Optional field\r\n  // - Maximum length: 15 characters\r\n  // - Can contain only digits and the \"+\" sign\r\n\r\n  \"email\": \"{{email}} \",\r\n  // Warehouse Contact Email:\r\n  // - Optional field\r\n  // - Maximum length: 255 characters\r\n  // - Must be in a valid email format\r\n\r\n  \"is_active\": \"{{is_active}}\",\r\n  // Warehouse Active Status:\r\n  // - Required field\r\n  // - Boolean value (true/false)\r\n\r\n  \"area_size\": {{area_size}}\r\n  // Warehouse Area Size:\r\n  // - Optional field\r\n  // - Floating-point number\r\n  // - Maximum value: 1,000,000.00\r\n  // - Must be a positive number representing the warehouse area in square meters\r\n  // - Input format: e.g., 1.25\r\n  //SHOULD BE CLARIFIED!!! Decimal input should have no more than 7 digits in total???\r\n  //\"Decimal input should have no more than 5 digits before the decimal point????\r\n}\r\n",
-											"options": {
-												"raw": {
-													"language": "json"
-												}
-											}
-										},
-										"url": {
-											"raw": "http://localhost:8002/warehouses/",
-											"protocol": "http",
-											"host": [
-												"localhost"
-											],
-											"port": "8002",
-											"path": [
-												"warehouses",
-												""
-											]
-										}
-									},
-									"response": []
-								},
-								{
-									"name": "Warehouse_creation_mandatory_fileds",
+									"name": "Create_warehouse_mandatory_fields_200",
 									"event": [
 										{
 											"listen": "test",
@@ -2044,7 +762,7 @@
 							"name": "Warehouses retrieval",
 							"item": [
 								{
-									"name": "Retrieving_warehouse_by_ID",
+									"name": "Retrieve_warehouse_by_ID_200",
 									"event": [
 										{
 											"listen": "test",
@@ -2084,7 +802,7 @@
 									"response": []
 								},
 								{
-									"name": "Retrieving_all_warehouses",
+									"name": "Retrieve_list_warehouses_200",
 									"event": [
 										{
 											"listen": "test",
@@ -2124,13 +842,13 @@
 									"response": []
 								},
 								{
-									"name": "Retrieving_warehouse_404",
+									"name": "Retrieve_non_existing_warehouse_404",
 									"event": [
 										{
 											"listen": "test",
 											"script": {
 												"exec": [
-													"pm.test (\"Not found - 404\", function() {\r",
+													"pm.test (\"Not found - 404. The warehouse wasn't found.\", function() {\r",
 													"    pm.response.to.have.status(404)\r",
 													"\r",
 													"});"
@@ -2165,13 +883,13 @@
 									"response": []
 								},
 								{
-									"name": "Retrieving_warehouse_403",
+									"name": "Retrieve_warehouse_Without_Authentication_403",
 									"event": [
 										{
 											"listen": "test",
 											"script": {
 												"exec": [
-													"pm.test (\"Not authenticated - 403\", function() {\r",
+													"pm.test (\"Not authenticated - 403. There is no authentication.\", function() {\r",
 													"    pm.response.to.have.status(403)\r",
 													"\r",
 													"});"
@@ -2206,13 +924,13 @@
 									"response": []
 								},
 								{
-									"name": "Retrieving_warehouse_401",
+									"name": "Retrieve_warehouse_Unauthorized_401",
 									"event": [
 										{
 											"listen": "test",
 											"script": {
 												"exec": [
-													"pm.test (\"Unauthorized - 401\", function() {\r",
+													"pm.test (\"Unauthorized - 401. The session is expired.\", function() {\r",
 													"    pm.response.to.have.status(401)\r",
 													"\r",
 													"});"
@@ -2249,13 +967,13 @@
 							]
 						},
 						{
-							"name": "Products_warehouse",
+							"name": "Products_to_warehouse",
 							"item": [
 								{
-									"name": "ADD_Product_to_Warehouse",
+									"name": "Add_Product_to_Warehouse",
 									"item": [
 										{
-											"name": "Add_Products_on_wh",
+											"name": "Add_Product_to_warehouse_200",
 											"event": [
 												{
 													"listen": "test",
@@ -2284,7 +1002,114 @@
 													}
 												],
 												"url": {
-													"raw": "http://localhost:8002/productinwarehouses?warehouse_id={{warehouseId}}&product_id={{product_id}}&quantity=1",
+													"raw": "http://localhost:8002/productinwarehouses/?warehouse_id={{warehouseId}}&product_id={{product_id}}&quantity=10650",
+													"protocol": "http",
+													"host": [
+														"localhost"
+													],
+													"port": "8002",
+													"path": [
+														"productinwarehouses",
+														""
+													],
+													"query": [
+														{
+															"key": "warehouse_id",
+															"value": "{{warehouseId}}"
+														},
+														{
+															"key": "product_id",
+															"value": "{{product_id}}"
+														},
+														{
+															"key": "quantity",
+															"value": "10650"
+														}
+													]
+												}
+											},
+											"response": []
+										},
+										{
+											"name": "Add_Product_to_non_existing_warehouse_ID_404",
+											"event": [
+												{
+													"listen": "test",
+													"script": {
+														"exec": [
+															"pm.test(\"Warehouse not found\", function(){\r",
+															"    pm.response.to.have.status(404)\r",
+															"})"
+														],
+														"type": "text/javascript",
+														"packages": {}
+													}
+												}
+											],
+											"request": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Authorization",
+														"value": "bearer {{accessToken}}",
+														"type": "text"
+													}
+												],
+												"url": {
+													"raw": "http://localhost:8002/productinwarehouses?warehouse_id=1f17381a-b1dc-4a3a-8207-59189fc452c2&product_id={{product_id}}&quantity={{quantity_product}}",
+													"protocol": "http",
+													"host": [
+														"localhost"
+													],
+													"port": "8002",
+													"path": [
+														"productinwarehouses"
+													],
+													"query": [
+														{
+															"key": "warehouse_id",
+															"value": "1f17381a-b1dc-4a3a-8207-59189fc452c2"
+														},
+														{
+															"key": "product_id",
+															"value": "{{product_id}}"
+														},
+														{
+															"key": "quantity",
+															"value": "{{quantity_product}}"
+														}
+													]
+												}
+											},
+											"response": []
+										},
+										{
+											"name": "Add_Product_with_invalid_quantity_400",
+											"event": [
+												{
+													"listen": "test",
+													"script": {
+														"exec": [
+															"pm.test(\"Quantity must be greater than or equal to 0 - 422\", function(){\r",
+															"    pm.response.to.have.status(400)\r",
+															"})"
+														],
+														"type": "text/javascript",
+														"packages": {}
+													}
+												}
+											],
+											"request": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Authorization",
+														"value": "bearer {{accessToken}}",
+														"type": "text"
+													}
+												],
+												"url": {
+													"raw": "http://localhost:8002/productinwarehouses?warehouse_id={{warehouseId}}&product_id={{product_id}}&quantity=-1",
 													"protocol": "http",
 													"host": [
 														"localhost"
@@ -2304,7 +1129,7 @@
 														},
 														{
 															"key": "quantity",
-															"value": "1"
+															"value": "-1"
 														}
 													]
 												}
@@ -2312,113 +1137,7 @@
 											"response": []
 										},
 										{
-											"name": "Add_Products_invalide_WH_ID_422",
-											"event": [
-												{
-													"listen": "test",
-													"script": {
-														"exec": [
-															"pm.test(\"Invalide UUID - 422\", function(){\r",
-															"    pm.response.to.have.status(422)\r",
-															"})"
-														],
-														"type": "text/javascript",
-														"packages": {}
-													}
-												}
-											],
-											"request": {
-												"method": "POST",
-												"header": [
-													{
-														"key": "Authorization",
-														"value": "bearer {{accessToken}}",
-														"type": "text"
-													}
-												],
-												"url": {
-													"raw": "http://localhost:8002/productinwarehouses?warehouse_id=b88309ac-8a3e-4e77-92a5-63e66c8412b&product_id={{product_id}}&quantity={{quantity_product}}",
-													"protocol": "http",
-													"host": [
-														"localhost"
-													],
-													"port": "8002",
-													"path": [
-														"productinwarehouses"
-													],
-													"query": [
-														{
-															"key": "warehouse_id",
-															"value": "b88309ac-8a3e-4e77-92a5-63e66c8412b"
-														},
-														{
-															"key": "product_id",
-															"value": "{{product_id}}"
-														},
-														{
-															"key": "quantity",
-															"value": "{{quantity_product}}"
-														}
-													]
-												}
-											},
-											"response": []
-										},
-										{
-											"name": "Add_Products_invalid_quantity",
-											"event": [
-												{
-													"listen": "test",
-													"script": {
-														"exec": [
-															"pm.test(\"Invalide UUID - 422\", function(){\r",
-															"    pm.response.to.have.status(422)\r",
-															"})"
-														],
-														"type": "text/javascript",
-														"packages": {}
-													}
-												}
-											],
-											"request": {
-												"method": "POST",
-												"header": [
-													{
-														"key": "Authorization",
-														"value": "bearer {{accessToken}}",
-														"type": "text"
-													}
-												],
-												"url": {
-													"raw": "http://localhost:8002/productinwarehouses?warehouse_id={{warehouseId}}&product_id={{product_id}}&quantity={{quantity_product}}",
-													"protocol": "http",
-													"host": [
-														"localhost"
-													],
-													"port": "8002",
-													"path": [
-														"productinwarehouses"
-													],
-													"query": [
-														{
-															"key": "warehouse_id",
-															"value": "{{warehouseId}}"
-														},
-														{
-															"key": "product_id",
-															"value": "{{product_id}}"
-														},
-														{
-															"key": "quantity",
-															"value": "{{quantity_product}}"
-														}
-													]
-												}
-											},
-											"response": []
-										},
-										{
-											"name": "Add_Products_invalide_PR_ID_422",
+											"name": "Add_Product_with_invalide_ID_to_Warehouse_422",
 											"event": [
 												{
 													"listen": "test",
@@ -2471,7 +1190,7 @@
 											"response": []
 										},
 										{
-											"name": "Add_Products_on_wh_401",
+											"name": "Add_Product_on_warehouse_401",
 											"event": [
 												{
 													"listen": "test",
@@ -2524,7 +1243,7 @@
 											"response": []
 										},
 										{
-											"name": "Add_Products_non_existing_WH_404",
+											"name": "Add_Product_to_non_existing_warehouse_404",
 											"event": [
 												{
 													"listen": "test",
@@ -2549,7 +1268,7 @@
 													}
 												],
 												"url": {
-													"raw": "http://localhost:8002/productinwarehouses?warehouse_id=b88309ac-8a3e-4e77-92a5-63e66c8412b2&product_id={{product_id}}&quantity={{quantity_product}}",
+													"raw": "http://localhost:8002/productinwarehouses?warehouse_id=1f17381a-b1dc-4a3a-8207-59189fc452c2&product_id={{product_id}}&quantity=1",
 													"protocol": "http",
 													"host": [
 														"localhost"
@@ -2561,7 +1280,7 @@
 													"query": [
 														{
 															"key": "warehouse_id",
-															"value": "b88309ac-8a3e-4e77-92a5-63e66c8412b2"
+															"value": "1f17381a-b1dc-4a3a-8207-59189fc452c2"
 														},
 														{
 															"key": "product_id",
@@ -2569,7 +1288,7 @@
 														},
 														{
 															"key": "quantity",
-															"value": "{{quantity_product}}"
+															"value": "1"
 														}
 													]
 												}
@@ -2577,7 +1296,7 @@
 											"response": []
 										},
 										{
-											"name": "Add_Products_non_existing_PR_404",
+											"name": "Add_non_existing_Products_to_warehouse_404",
 											"event": [
 												{
 													"listen": "test",
@@ -2632,10 +1351,10 @@
 									]
 								},
 								{
-									"name": "Retrieving_Products",
+									"name": "Retrieve_Products_from_Warehouse",
 									"item": [
 										{
-											"name": "Retrieve_products_from_wh",
+											"name": "Retrieve_products_from_warehouse_200",
 											"event": [
 												{
 													"listen": "test",
@@ -2675,7 +1394,7 @@
 											"response": []
 										},
 										{
-											"name": "Retrieve_products_from_wh_401",
+											"name": "Retrieve_products_from_warehouse_unathorized_401",
 											"event": [
 												{
 													"listen": "test",
@@ -2715,7 +1434,7 @@
 											"response": []
 										},
 										{
-											"name": "Retrieve_products_from_wh_405",
+											"name": "Retrieve_products_from_warehouse_wrong_pharam__405",
 											"event": [
 												{
 													"listen": "test",
@@ -2755,13 +1474,13 @@
 											"response": []
 										},
 										{
-											"name": "Retrieve_products_from_wh_404",
+											"name": "Retrieve_products_from_non_existing_warehouse_404",
 											"event": [
 												{
 													"listen": "test",
 													"script": {
 														"exec": [
-															"pm.test(\"Not found - 404 Ok\", function() {\r",
+															"pm.test(\"Warehouse not found - 404 Ok\", function() {\r",
 															"    pm.response.to.have.status(404)\r",
 															"})"
 														],
@@ -2795,13 +1514,13 @@
 											"response": []
 										},
 										{
-											"name": "Retrieve_products_from_wh_422",
+											"name": "Retrieve_products_from_warehouse_with_invalide_UUID_422",
 											"event": [
 												{
 													"listen": "test",
 													"script": {
 														"exec": [
-															"pm.test(\"Unprocessable entity - 422 Ok\", function() {\r",
+															"pm.test(\"Unprocessable entity - 422 Ok. UUID is invalide\", function() {\r",
 															"    pm.response.to.have.status(422)\r",
 															"})"
 														],
@@ -2837,10 +1556,10 @@
 									]
 								},
 								{
-									"name": "UPDATE_Product_on_WareHouse",
+									"name": "update_quantity_product_on_Warehouse",
 									"item": [
 										{
-											"name": "UPDATE_QUANTITY",
+											"name": "update_quantity_for_product_in_warehouse",
 											"request": {
 												"method": "PUT",
 												"header": [
@@ -2876,13 +1595,13 @@
 											"response": []
 										},
 										{
-											"name": "UPDATE_QUANTITY_401",
+											"name": "update_quantity_for_product_in_warehouse_unauthorized_401",
 											"event": [
 												{
 													"listen": "test",
 													"script": {
 														"exec": [
-															"pm.test(\"Unathorized - 401\", function() {\r",
+															"pm.test(\"Invalid token or unauthorized access - 401\", function() {\r",
 															"    pm.response.to.have.status(401)\r",
 															"})"
 														],
@@ -2926,13 +1645,13 @@
 											"response": []
 										},
 										{
-											"name": "UPDATE_QUANTITY_404",
+											"name": "update_quantity_for_product_with_non_existing_id_404",
 											"event": [
 												{
 													"listen": "test",
 													"script": {
 														"exec": [
-															"pm.test(\"Not found - 404\", function() {\r",
+															"pm.test(\"Product in warehouse not found - 404\", function() {\r",
 															"    pm.response.to.have.status(404)\r",
 															"})"
 														],
@@ -2951,7 +1670,7 @@
 													}
 												],
 												"url": {
-													"raw": "http://localhost:8002/productinwarehouses/{{product_id}}?product_warehouse_id={{product_warehouse_id}}&quantity={{quantity_product}}",
+													"raw": "http://localhost:8002/productinwarehouses/{{product_id}}?product_warehouse_id=e2f16672-5559-4c1d-9309-98ab1680991e&quantity={{quantity_product}}",
 													"protocol": "http",
 													"host": [
 														"localhost"
@@ -2964,7 +1683,7 @@
 													"query": [
 														{
 															"key": "product_warehouse_id",
-															"value": "{{product_warehouse_id}}"
+															"value": "e2f16672-5559-4c1d-9309-98ab1680991e"
 														},
 														{
 															"key": "quantity",
@@ -2978,10 +1697,10 @@
 									]
 								},
 								{
-									"name": "DELETE_PRODUCTS_FROM_WH",
+									"name": "delete_product_from_warehouse",
 									"item": [
 										{
-											"name": "Delete_product_200",
+											"name": "delete_product_from_warehouse_200",
 											"event": [
 												{
 													"listen": "test",
@@ -3027,13 +1746,13 @@
 											"response": []
 										},
 										{
-											"name": "Delete_product_404",
+											"name": "delete_non_existing_product_from_warehouse_404",
 											"event": [
 												{
 													"listen": "test",
 													"script": {
 														"exec": [
-															"pm.test(\"Not found\", function(){\r",
+															"pm.test(\"Product not found in warehous\", function(){\r",
 															"    pm.response.to.have.status(404)\r",
 															"})"
 														],
@@ -3052,7 +1771,7 @@
 													}
 												],
 												"url": {
-													"raw": "http://localhost:8002/productinwarehouses/{{product_id}}?product_warehouse_id={{product_warehouse_id}}",
+													"raw": "http://localhost:8002/productinwarehouses/733e40a0-d935-452a-9564-2141c7ab5cd9?product_warehouse_id={{product_warehouse_id}}",
 													"protocol": "http",
 													"host": [
 														"localhost"
@@ -3060,7 +1779,7 @@
 													"port": "8002",
 													"path": [
 														"productinwarehouses",
-														"{{product_id}}"
+														"733e40a0-d935-452a-9564-2141c7ab5cd9"
 													],
 													"query": [
 														{
@@ -3080,7 +1799,7 @@
 							"name": "Update_Warehouse",
 							"item": [
 								{
-									"name": "Warehouse with empty optional fields",
+									"name": "Update_Warehouse_empty_optional_fields_200",
 									"event": [
 										{
 											"listen": "prerequest",
@@ -3153,7 +1872,7 @@
 									"response": []
 								},
 								{
-									"name": "Warehouse Update with all fields filled",
+									"name": "Update_Warehouse_all_fields_filled_200",
 									"event": [
 										{
 											"listen": "test",
@@ -3223,13 +1942,13 @@
 									"response": []
 								},
 								{
-									"name": "Warehouse Update with empty body request",
+									"name": "Update_Warehouse_with_empty_body_request_200",
 									"event": [
 										{
 											"listen": "test",
 											"script": {
 												"exec": [
-													"pm.test (\"ok. 200. The supplier was uppdated\", function () {\r",
+													"pm.test (\"ok. 200. The warehouse was uppdated\", function () {\r",
 													"    pm.response.to.have.status(200);\r",
 													"});"
 												],
@@ -3272,13 +1991,13 @@
 									"response": []
 								},
 								{
-									"name": "Warehouse Update with missed mandatory filed",
+									"name": "update_warehouse_with_missed_mandatory_fileds_200",
 									"event": [
 										{
 											"listen": "test",
 											"script": {
 												"exec": [
-													"pm.test (\"Status code is 200 OK! supplier was uppdated\", function () {\r",
+													"pm.test (\"Status code is 200 OK. Warehouse was uppdated\", function () {\r",
 													"    pm.response.to.have (200);\r",
 													"});"
 												],
@@ -3321,13 +2040,13 @@
 									"response": []
 								},
 								{
-									"name": "Warehouse Update with warehouse_id doesn't exist",
+									"name": "update_non_existing_warehouse_404",
 									"event": [
 										{
 											"listen": "test",
 											"script": {
 												"exec": [
-													"pm.test (\"404, supplier_id doesn't exist\", function () {\r",
+													"pm.test (\"404, warehouse doesn't exist\", function () {\r",
 													"    pm.response.to.have.status(404);\r",
 													"});"
 												],
@@ -3370,7 +2089,7 @@
 									"response": []
 								},
 								{
-									"name": "Warehouse Update with No valid Authorization token",
+									"name": "update_warehouse_unauthorized_401",
 									"event": [
 										{
 											"listen": "test",
@@ -3421,10 +2140,10 @@
 							]
 						},
 						{
-							"name": "DELETE_Warehouse",
+							"name": "delete_warehouse",
 							"item": [
 								{
-									"name": "Warehouse deletion",
+									"name": "delete_warehouse_200",
 									"event": [
 										{
 											"listen": "prerequest",
@@ -3497,13 +2216,13 @@
 									"response": []
 								},
 								{
-									"name": "Warehouse Update with warehouse_id doesn't exist",
+									"name": "delete_non_existing_warehouse_404",
 									"event": [
 										{
 											"listen": "test",
 											"script": {
 												"exec": [
-													"pm.test (\"404, supplier_id doesn't exist\", function () {\r",
+													"pm.test (\"404, The warehouse doesn't exist\", function () {\r",
 													"    pm.response.to.have.status(404);\r",
 													"});"
 												],
@@ -3546,7 +2265,7 @@
 									"response": []
 								},
 								{
-									"name": "Warehouse Update with No valid Authorization token",
+									"name": "delete_warehouse_unauthorized_401",
 									"event": [
 										{
 											"listen": "test",
@@ -3724,7 +2443,7 @@
 							"name": "Update_Supplier",
 							"item": [
 								{
-									"name": "Supplier with empty optional fields",
+									"name": "Update_Supplier_empty_optional_fields_200",
 									"event": [
 										{
 											"listen": "prerequest",
@@ -3797,7 +2516,7 @@
 									"response": []
 								},
 								{
-									"name": "Supplier Update with all fields filled",
+									"name": "Update_Supplier_all_fields_filled_200",
 									"event": [
 										{
 											"listen": "test",
@@ -3867,14 +2586,14 @@
 									"response": []
 								},
 								{
-									"name": "Supplier Update with wrong data",
+									"name": "Update_Supplier_wrong_data_422",
 									"event": [
 										{
 											"listen": "test",
 											"script": {
 												"exec": [
-													"pm.test (\"Status code is 200 OK! Supplier was uppdated\", function () {\r",
-													"    pm.response.to.have (200);\r",
+													"pm.test(\"Status code is 422. Supplier wasn't uppdated\", function(){\r",
+													"    pm.response.to.have.status(422)\r",
 													"});"
 												],
 												"type": "text/javascript",
@@ -3937,7 +2656,7 @@
 									"response": []
 								},
 								{
-									"name": "Supplier Update with empty body request",
+									"name": "Update_Supplier_empty_body_request_200",
 									"event": [
 										{
 											"listen": "test",
@@ -3986,7 +2705,7 @@
 									"response": []
 								},
 								{
-									"name": "Supplier Update with missed mandatory filed",
+									"name": "Update_Supplier_missed_mandatory_fileds_200",
 									"event": [
 										{
 											"listen": "test",
@@ -4035,7 +2754,7 @@
 									"response": []
 								},
 								{
-									"name": "Supplier Update with supplier_id doesn't exist",
+									"name": "Update_non_existing_supplier_404",
 									"event": [
 										{
 											"listen": "test",
@@ -4084,7 +2803,7 @@
 									"response": []
 								},
 								{
-									"name": "Supplier Update with No valid Authorization token",
+									"name": "Update_Supplier_unauthorized_401",
 									"event": [
 										{
 											"listen": "test",
@@ -4138,7 +2857,7 @@
 							"name": "Delete_Supplier",
 							"item": [
 								{
-									"name": "Delete_supplier_200_without_products",
+									"name": "Delete_supplier_without_products_200",
 									"event": [
 										{
 											"listen": "test",
@@ -4185,7 +2904,7 @@
 									"response": []
 								},
 								{
-									"name": "Delete_supplier_401",
+									"name": "Delete_supplier_unauthorized_401",
 									"event": [
 										{
 											"listen": "test",
@@ -4232,7 +2951,7 @@
 									"response": []
 								},
 								{
-									"name": "Delete_supplier_404",
+									"name": "Delete_non_existing_supplier_404",
 									"event": [
 										{
 											"listen": "test",
@@ -4257,7 +2976,7 @@
 											}
 										],
 										"url": {
-											"raw": "http://localhost:8002/suppliers/be53c59f-c7c7-434f-a8e9-960adc2084",
+											"raw": "http://localhost:8002/suppliers/8b53199f-7ea8-4ba5-ba8a-70a791e3fbe4",
 											"protocol": "http",
 											"host": [
 												"localhost"
@@ -4265,7 +2984,7 @@
 											"port": "8002",
 											"path": [
 												"suppliers",
-												"be53c59f-c7c7-434f-a8e9-960adc2084"
+												"8b53199f-7ea8-4ba5-ba8a-70a791e3fbe4"
 											],
 											"query": [
 												{
@@ -4284,7 +3003,7 @@
 							"name": "Retrieve_suppliers",
 							"item": [
 								{
-									"name": "Retrieving_all_suppliers",
+									"name": "Retrieve_all_suppliers_200",
 									"event": [
 										{
 											"listen": "test",
@@ -4338,7 +3057,7 @@
 									"response": []
 								},
 								{
-									"name": "Retrieving_Supplier_by_ID",
+									"name": "Retrieve_Supplier_by_ID_200",
 									"event": [
 										{
 											"listen": "prerequest",
@@ -4384,7 +3103,7 @@
 											}
 										],
 										"url": {
-											"raw": "http://localhost:8002/suppliers/1b754b05-7e2c-4e19-9dd8-e17271c60cc4",
+											"raw": "http://localhost:8002/suppliers/{{supplierID}}",
 											"protocol": "http",
 											"host": [
 												"localhost"
@@ -4392,14 +3111,14 @@
 											"port": "8002",
 											"path": [
 												"suppliers",
-												"1b754b05-7e2c-4e19-9dd8-e17271c60cc4"
+												"{{supplierID}}"
 											]
 										}
 									},
 									"response": []
 								},
 								{
-									"name": "Retrieving_supplier_by_name",
+									"name": "Retrieve_supplier_by_name_200",
 									"event": [
 										{
 											"listen": "test",
@@ -4444,7 +3163,7 @@
 											}
 										],
 										"url": {
-											"raw": "{{base_url_products}}/search_suppliers/?name=JsKYAnpo2EcZPZkC2GdDGBPZh4Cph29ZadOq27T YlO5Q9Q",
+											"raw": "{{base_url_products}}/search_suppliers/?name={{name_supplier}}",
 											"host": [
 												"{{base_url_products}}"
 											],
@@ -4455,7 +3174,7 @@
 											"query": [
 												{
 													"key": "name",
-													"value": "JsKYAnpo2EcZPZkC2GdDGBPZh4Cph29ZadOq27T YlO5Q9Q"
+													"value": "{{name_supplier}}"
 												}
 											]
 										}
@@ -4463,7 +3182,7 @@
 									"response": []
 								},
 								{
-									"name": "Retrieving_Supplier_by_ID 404",
+									"name": "Retrieve_non_existing_supplier_by_ID_404",
 									"event": [
 										{
 											"listen": "test",
@@ -4505,7 +3224,7 @@
 									"response": []
 								},
 								{
-									"name": "Retrieving_Supplier_by_ID 400",
+									"name": "Retrieve_supplier_by_ID_with_null_id_400",
 									"event": [
 										{
 											"listen": "test",
@@ -4545,10 +3264,20 @@
 									"response": []
 								},
 								{
-									"name": "Retrieving_Supplier_by_ID 401",
+									"name": "Retrieve_Supplier_by_ID_unauthorized_401",
 									"event": [
 										{
 											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										},
+										{
+											"listen": "test",
 											"script": {
 												"exec": [
 													"pm.test (\"Invalid token or unauthorized access. Status code is 401\", function () {\r",
@@ -4585,594 +3314,1748 @@
 									"response": []
 								}
 							]
+						},
+						{
+							"name": "Create_Supplier",
+							"item": [
+								{
+									"name": "Create_Supplier_all_field_200",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test (\"Status code is 201. The supplier was created.\", function () {\r",
+													"    pm.response.to.have.status(201)\r",
+													"});\r",
+													"\r",
+													"const supplierID = pm.response.json().supplier_id;\r",
+													"const name_supplier = pm.response.json().name;\r",
+													"\r",
+													"pm.environment.set (\"supplierID\", supplierID);\r",
+													"pm.environment.set(\"name_supplier\", name_supplier);\r",
+													"\r",
+													"console.log(\"Supplier ID:\", supplierID);\r",
+													"console.log(\"Supplier name: \", name_supplier);\r",
+													"\r",
+													"\r",
+													""
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{accessToken}}",
+												"type": "text"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\r\n\"name\": \"{{name_supplier}}\", \r\n  // Supplier Name: \r\n  // - Required field\r\n  // - Length should be between 3 and 100 characters\r\n\r\n  \"contact_name\": \"{{contact_name}}\", \r\n  // Contact Name of the Supplier: \r\n  // - Required field\r\n  // - Maximum length: 100 characters\r\n\r\n  \"contact_email\": \"{{contact_email}}\", \r\n  // Contact Email: \r\n  // - Required field\r\n  // - Must be in a valid email format (e.g., containing \"@\" with a proper domain)\r\n  // - Maximum length: 20 characters\r\n\r\n  \"phone_number\": \"{{phone_number}}\", \r\n  // Phone Number: \r\n  // - Optional field\r\n  // - Maximum length: 15 characters, can include only digits and the \"+\" sign\r\n\r\n  \"address\": \"{{address}}\", \r\n  // Supplier Address: \r\n  // - Optional field\r\n  // - Maximum length: 200 characters\r\n  // - Can include only letters and numbers\r\n\r\n  \"country\": \"{{country}}\", \r\n  // Country of Supplier: \r\n  // - Optional field\r\n  // - Maximum length: 50 characters\r\n  // - Can include only letters\r\n\r\n  \"city\": \"{{city}}\", \r\n  // City of Supplier: \r\n  // - Optional field\r\n  // - Maximum length: 50 characters\r\n  // - Can include only letters, spaces, or hyphens\r\n\r\n  \"website\": \"{{website}}\" \r\n  // Supplier Website: \r\n  // - Optional field\r\n  // - Must be a valid URL\r\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "http://localhost:8002/suppliers/",
+											"protocol": "http",
+											"host": [
+												"localhost"
+											],
+											"port": "8002",
+											"path": [
+												"suppliers",
+												""
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Create_Supplier_only_mandatory_200",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test (\"Status code is 201. The supplier was created.\", function () {\r",
+													"    pm.response.to.have.status(201)\r",
+													"});\r",
+													"\r",
+													"let response = pm.response.json();\r",
+													"\r",
+													"let supplierID = response.supplier_id;\r",
+													"\r",
+													"pm.environment.set (\"supplierID\", supplierID);\r",
+													"\r",
+													"\r",
+													""
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{accessToken}}",
+												"type": "text"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\r\n  \"name\": \"{{name_supplier}}\", \r\n  // Supplier Name: \r\n  // - Required field\r\n  // - Length should be between 3 and 100 characters\r\n\r\n  \"contact_name\": \"{{contact_name}}\", \r\n  // Contact Name of the Supplier: \r\n  // - Required field\r\n  // - Maximum length: 100 characters\r\n\r\n  \"contact_email\": \"{{contact_email}}\" \r\n  // Contact Email: \r\n  // - Required field\r\n  // - Must be in a valid email format (e.g., containing \"@\" with a proper domain)\r\n  // - Maximum length: 20 characters\r\n\r\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "http://localhost:8002/suppliers/",
+											"protocol": "http",
+											"host": [
+												"localhost"
+											],
+											"port": "8002",
+											"path": [
+												"suppliers",
+												""
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Create_Supplier_duplicate_name_422",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test (\"Status code is 422. The supplier is already exist.\", function () {\r",
+													"    pm.response.to.have.status(422)\r",
+													"});\r",
+													"\r",
+													"let response = pm.response.json();\r",
+													"\r",
+													"let supplierID = response.supplier_id;\r",
+													"\r",
+													"pm.environment.set (\"supplierID\", supplierID);\r",
+													"\r",
+													"\r",
+													""
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{accessToken}}",
+												"type": "text"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\r\n  \"name\": \"{{dup_name}}\", \r\n  // Supplier Name: \r\n  // - Required field\r\n  // - Length should be between 3 and 100 characters\r\n\r\n  \"contact_name\": \"{{contact_name}}\", \r\n  // Contact Name of the Supplier: \r\n  // - Required field\r\n  // - Maximum length: 100 characters\r\n\r\n  \"contact_email\": \"{{contact_email}}\", \r\n  // Contact Email: \r\n  // - Required field\r\n  // - Must be in a valid email format (e.g., containing \"@\" with a proper domain)\r\n  // - Maximum length: 20 characters\r\n\r\n  \"phone_number\": \"{{phone_number}}\", \r\n  // Phone Number: \r\n  // - Optional field\r\n  // - Maximum length: 15 characters, can include only digits and the \"+\" sign\r\n\r\n  \"address\": \"{{address}}\", \r\n  // Supplier Address: \r\n  // - Optional field\r\n  // - Maximum length: 200 characters\r\n  // - Can include only letters and numbers\r\n\r\n  \"country\": \"{{country}}\", \r\n  // Country of Supplier: \r\n  // - Optional field\r\n  // - Maximum length: 50 characters\r\n  // - Can include only letters\r\n\r\n  \"city\": \"{{city}}\", \r\n  // City of Supplier: \r\n  // - Optional field\r\n  // - Maximum length: 50 characters\r\n  // - Can include only letters, spaces, or hyphens\r\n\r\n  \"website\": \"{{website}}\" \r\n  // Supplier Website: \r\n  // - Optional field\r\n  // - Must be a valid URL\r\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "http://localhost:8002/suppliers/",
+											"protocol": "http",
+											"host": [
+												"localhost"
+											],
+											"port": "8002",
+											"path": [
+												"suppliers",
+												""
+											]
+										}
+									},
+									"response": []
+								}
+							],
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"type": "text/javascript",
+										"packages": {},
+										"exec": [
+											"// Supplier Name:\r",
+											"// - Required field\r",
+											"// - Length should be between 3 and 100 characters\r",
+											"function getRandomNameSupplier() {\r",
+											"    const lettersDigits = \"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 \";\r",
+											"    const length = Math.floor(Math.random() * (100 - 3 + 1)) + 3;\r",
+											"    let name_supplier = \"\";\r",
+											"\r",
+											"    // Ensure the first character is a letter\r",
+											"    const letters = \"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ\";\r",
+											"    name_supplier += letters.charAt(Math.floor(Math.random() * letters.length));\r",
+											"\r",
+											"    // Generate the remaining characters\r",
+											"    for (let i = 1; i < length; i++) {\r",
+											"        name_supplier += lettersDigits.charAt(Math.floor(Math.random() * lettersDigits.length));\r",
+											"    }\r",
+											"\r",
+											"    return name_supplier;\r",
+											"}\r",
+											"\r",
+											"// Contact Name of the Supplier:\r",
+											"// - Required field\r",
+											"// - Maximum length: 100 characters\r",
+											"// - Can only contain letters, digits, and spaces\r",
+											"\r",
+											"function getRandomContactName() {\r",
+											"    const characters = \"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 \";\r",
+											"    const maxLength = 100;\r",
+											"    const length = Math.floor(Math.random() * maxLength) + 1;\r",
+											"    let contactName = \"\";\r",
+											"\r",
+											"    for (let i = 0; i < length; i++) {\r",
+											"        contactName += characters.charAt(Math.floor(Math.random() * characters.length));\r",
+											"    }\r",
+											"\r",
+											"    return contactName.trim(); // Trim to remove leading/trailing spaces\r",
+											"}\r",
+											"\r",
+											"// Contact Email:\r",
+											"// - Required field\r",
+											"// - Must be in a valid email format (e.g., containing \"@\" with a proper domain)\r",
+											"// - Maximum length: 20 characters\r",
+											"function getRandomemail() {\r",
+											"    const letters = \"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ\";\r",
+											"    const characters = \"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789\";\r",
+											"    \r",
+											"    const minLocalPartLength = 15;  // Minimum length for the local part\r",
+											"    const maxLocalPartLength = 20;  // Maximum length for the local part\r",
+											"    const localPartLength = Math.floor(Math.random() * (maxLocalPartLength - minLocalPartLength + 1)) + minLocalPartLength; // 15-20 characters\r",
+											"    \r",
+											"    const domainLength = Math.floor(Math.random() * 4) + 3; // 3-6 characters for the domain\r",
+											"    const extensionLength = Math.floor(Math.random() * 2) + 2; // 2-3 characters for the extension\r",
+											"\r",
+											"    let localPart = \"\";\r",
+											"    let domain = \"\";\r",
+											"    let extension = \"\";\r",
+											"\r",
+											"    // Ensure the first character of the local part is a letter\r",
+											"    localPart += letters.charAt(Math.floor(Math.random() * letters.length));\r",
+											"\r",
+											"    // Generate the remaining characters of the local part\r",
+											"    for (let i = 1; i < localPartLength; i++) {\r",
+											"        localPart += characters.charAt(Math.floor(Math.random() * characters.length));\r",
+											"    }\r",
+											"\r",
+											"    // Ensure the domain starts with a letter\r",
+											"    domain += letters.charAt(Math.floor(Math.random() * letters.length));\r",
+											"\r",
+											"    // Generate the remaining characters of the domain\r",
+											"    for (let i = 1; i < domainLength; i++) {\r",
+											"        domain += letters.charAt(Math.floor(Math.random() * letters.length));\r",
+											"    }\r",
+											"\r",
+											"    // Generate the extension (TLD)\r",
+											"    for (let i = 0; i < extensionLength; i++) {\r",
+											"        extension += letters.charAt(Math.floor(Math.random() * letters.length));\r",
+											"    }\r",
+											"\r",
+											"    // Return the generated email address\r",
+											"    return `${localPart}@${domain}.${extension}`;\r",
+											"}\r",
+											"// Phone Number:\r",
+											"// - Optional field\r",
+											"// - Maximum length: 15 characters, can include only digits and the \"+\" sign\r",
+											"function getRandomPhoneNumber() {\r",
+											"    const numbers = \"0123456789\";\r",
+											"    const length = Math.floor(Math.random() * 4 ) + 11; // From 11 to 15\r",
+											"    let phone_number = \"\";\r",
+											"\r",
+											"    phone_number += numbers.charAt(Math.floor(Math.random() * numbers.length));\r",
+											"\r",
+											"    for (let i = 1; i < length; i++) {\r",
+											"        phone_number += numbers.charAt(Math.floor(Math.random() * numbers.length));\r",
+											"    } \r",
+											"\r",
+											"    // Return the generated phone number\r",
+											"    return \"+\" + phone_number;\r",
+											"}\r",
+											"\r",
+											"// Supplier Address:\r",
+											"// - Optional field\r",
+											"// - Maximum length: 200 characters\r",
+											"// - Can include only letters and numbers\r",
+											"function getRandomAddress() {\r",
+											"    const characters = \"qazwsxedcrfvtgbyhnujmikolpZAQXSWCDEVFRBGTNHYMJUKILOP0123456789\";\r",
+											"    const letters = \"qazwsxedcrfvtgbyhnujmikolp\";\r",
+											"\r",
+											"    const length = Math.floor(Math.random() * 200 ) + 1; // From 1 to 200\r",
+											"    let address = \"\";\r",
+											"\r",
+											"    address += letters.charAt(Math.floor(Math.random() * letters.length)).toUpperCase();\r",
+											"    \r",
+											"    for (let i = 1; i < length; i++) {\r",
+											"        address += characters.charAt(Math.floor(Math.random() * characters.length));\r",
+											"    } \r",
+											"\r",
+											"    return address;\r",
+											"}\r",
+											"\r",
+											"// Country of Supplier:\r",
+											"// - Optional field\r",
+											"// - Maximum length: 50 characters\r",
+											"// - Can include only letters\r",
+											"function getRandomCountry() {\r",
+											"    const letters = \"qazwsxedcrfvtgbyhnujmikolp\";\r",
+											"\r",
+											"    const length = Math.floor(Math.random() * 50 ) + 1; // From 1 to 50\r",
+											"    let country = \"\";\r",
+											"\r",
+											"    country += letters.charAt(Math.floor(Math.random() * letters.length)).toUpperCase();\r",
+											"    \r",
+											"    for (let i = 1; i < length; i++) {\r",
+											"        country += letters.charAt(Math.floor(Math.random() * letters.length));\r",
+											"    } \r",
+											"\r",
+											"    return country;\r",
+											"}\r",
+											"\r",
+											"// City of Supplier:\r",
+											"// - Optional field\r",
+											"// - Maximum length: 50 characters\r",
+											"// - Can include only letters, spaces, or hyphens\r",
+											"function getRandomCity() {\r",
+											"    const letters = \"qazwsxedcrfvtgbyhnujmikolp\";  // Only letters\r",
+											"    const length = Math.floor(Math.random() * 50) + 1;  // Random length between 1 and 50\r",
+											"    let city = \"\";\r",
+											"\r",
+											"    // Always start with an uppercase letter\r",
+											"    city += letters.charAt(Math.floor(Math.random() * letters.length)).toUpperCase();\r",
+											"\r",
+											"    // Generate the remaining part of the city name\r",
+											"    for (let i = 1; i < length; i++) {\r",
+											"        // Choose a random letter from the list\r",
+											"        let randomChar = letters.charAt(Math.floor(Math.random() * letters.length));\r",
+											"        city += randomChar;\r",
+											"    }\r",
+											"\r",
+											"    return city;\r",
+											"}\r",
+											"\r",
+											"// Supplier Website:\r",
+											"// - Optional field\r",
+											"// - Must be a valid URL\r",
+											"function getRandomWebSite() {\r",
+											"    const letters = \"qazwsxedcrfvtgbyhnujmikolpZAQXSWCDEVFRBGTNHYMJUKILOP\";\r",
+											"    const characters = \"ZAQXSWCDEVFRBGTNHYMJUKILOPqazwsxedcrfvtgbyhnujmikolp0123456789\"; \r",
+											"    const protocol = [\"https://www.\", \"http://\", \"https://\"];\r",
+											"\r",
+											"    const length2 = Math.floor(Math.random() * 3) + 5;\r",
+											"    const length3 = Math.floor(Math.random() * 1) + 2;\r",
+											"    let tld = \"\";\r",
+											"    let sld = \"\";\r",
+											"\r",
+											"    sld += letters.charAt(Math.floor(Math.random() * letters.length));\r",
+											"\r",
+											"    for (let i = 1; i < length2; i++) {\r",
+											"        sld += characters.charAt(Math.floor(Math.random() * characters.length));\r",
+											"    } \r",
+											"\r",
+											"    for (let i = 0; i < length3; i++) {\r",
+											"        tld += letters.charAt(Math.floor(Math.random() * letters.length));\r",
+											"    }\r",
+											"\r",
+											"    const Randomprotocol = protocol[(Math.floor(Math.random() * protocol.length))];\r",
+											"\r",
+											"    return Randomprotocol + sld + \".\" + tld;\r",
+											"}\r",
+											"\r",
+											"// Generate and store variables in Postman environment\r",
+											"pm.environment.set(\"contact_email\", getRandomemail());\r",
+											"pm.environment.set(\"name_supplier\", getRandomNameSupplier());\r",
+											"pm.environment.set(\"contact_name\", getRandomContactName());\r",
+											"pm.environment.set(\"phone_number\", getRandomPhoneNumber());\r",
+											"pm.environment.set(\"address\", getRandomAddress());\r",
+											"pm.environment.set(\"country\", getRandomCountry());\r",
+											"pm.environment.set(\"city\", getRandomCity());\r",
+											"pm.environment.set(\"website\", getRandomWebSite());\r",
+											"\r",
+											"// Get values from the environment\r",
+											"const contact_email = pm.environment.get(\"contact_email\");\r",
+											"const name_supplier = pm.environment.get(\"name_supplier\");\r",
+											"const contact_name = pm.environment.get(\"contact_name\");\r",
+											"const phone_number = pm.environment.get(\"phone_number\");\r",
+											"const address = pm.environment.get(\"address\");\r",
+											"const country = pm.environment.get(\"country\");\r",
+											"const city = pm.environment.get(\"city\");\r",
+											"const website = pm.environment.get(\"website\");\r",
+											"\r",
+											"// Log to console\r",
+											"console.log({\r",
+											"    \"name\": name_supplier, \r",
+											"    \"contact_name\": contact_name, \r",
+											"    \"contact_email\": contact_email, \r",
+											"    \"phone_number\": phone_number, \r",
+											"    \"address\": address, \r",
+											"    \"country\": country, \r",
+											"    \"city\": city, \r",
+											"    \"website\": website\r",
+											"});\r",
+											"\r",
+											"\r",
+											""
+										]
+									}
+								},
+								{
+									"listen": "test",
+									"script": {
+										"type": "text/javascript",
+										"packages": {},
+										"exec": [
+											""
+										]
+									}
+								}
+							]
 						}
 					]
 				},
 				{
-					"name": "Create_Supplier",
+					"name": "Products",
 					"item": [
 						{
-							"name": "Create_Supplier_all_field_200",
-							"event": [
+							"name": "Create_product",
+							"item": [
 								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test (\"Status code is 201. The supplier was created.\", function () {\r",
-											"    pm.response.to.have.status(201)\r",
-											"});\r",
-											"\r",
-											"const supplierID = pm.response.json().supplier_id;\r",
-											"\r",
-											"pm.environment.set (\"supplierID\", supplierID);\r",
-											"\r",
-											"console.log(\"Supplier ID:\", supplierID);\r",
-											"\r",
-											"\r",
-											""
+									"name": "Create_product_mandatory_fields_201",
+									"event": [
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										},
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code is 201. Product was created.\", function () {\r",
+													"    pm.response.to.have.status(201);\r",
+													"});\r",
+													"\r",
+													"const productId = pm.response.json().product_id;  // Assuming product_id is in the response body\r",
+													"pm.environment.set(\"product_id\", productId);\r",
+													"\r",
+													""
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "bearer {{accessToken}}",
+												"type": "text"
+											}
 										],
-										"type": "text/javascript",
-										"packages": {}
-									}
+										"body": {
+											"mode": "raw",
+											"raw": "{\r\n  \"name\": \"{{name_product}}\", // Mandatory. 3-100 characters. Only letters and numbers.\r\n  \"price\": {{Price_product}}, // Mandatory. Positive number, 2 decimals (e.g., 20.00). Max 10 digits including decimals.\r\n  \"stock_quantity\": {{quantity_product}}, // Mandatory. Whole number, at least 0.\r\n  \"supplier_id\": \"{{supplierID}}\" // Mandatory. Valid UUID. Must match an existing supplier ID in the database.\r\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "http://localhost:8002/products/",
+											"protocol": "http",
+											"host": [
+												"localhost"
+											],
+											"port": "8002",
+											"path": [
+												"products",
+												""
+											]
+										}
+									},
+									"response": []
 								},
+								{
+									"name": "Create_product_all_fields_201",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code is 201. The product was created.\", function () {\r",
+													"    pm.response.to.have.status(201);\r",
+													"});\r",
+													"\r",
+													"const productId = pm.response.json().product_id;  // Assuming product_id is in the response body\r",
+													"pm.environment.set(\"product_id\", productId);"
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{accessToken}}",
+												"type": "text"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\r\n  \"name\": \"{{name_product}}\", // Mandatory. 3-100 characters. Only letters and numbers.\r\n  \"description\": \"{{description_product}}\", // Optional. Up to 500 characters. No restrictions on symbols.\r\n  \"category\": \"{{category_product}}\", // Optional. Up to 50 characters. Only letters and numbers.\r\n  \"price\": \"{{Price_product}}\", // Mandatory. Positive number, 2 decimals (e.g., 20.00). Max 10 digits including decimals.\r\n  \"stock_quantity\": {{quantity_product}}, // Mandatory. Whole number, at least 0.\r\n  \"supplier_id\": \"{{supplierID}}\", // Mandatory. Valid UUID. Must match an existing supplier ID in the database.\r\n  \"image_url\": \"{{url_product}}\", // Optional. Max 255 characters. Formats: png, jpeg, jpg. Stored as a URL.\r\n  \"weight\": \"100.10\", // Optional. Positive number with a decimal point. Max 6 digits (2 decimals).\r\n  \"dimensions\": \"{{dimensions_product}}\", // Optional. Max 100 characters. Whole numbers and the symbol \"x\" allowed.\r\n  \"manufacturer\": \"{{manufacturer_product}}\" // Optional. Max 100 characters. Only letters and numbers.\r\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{base_url_products}}/products/",
+											"host": [
+												"{{base_url_products}}"
+											],
+											"path": [
+												"products",
+												""
+											]
+										}
+									},
+									"response": []
+								}
+							],
+							"event": [
 								{
 									"listen": "prerequest",
 									"script": {
-										"exec": [
-											""
-										],
 										"type": "text/javascript",
-										"packages": {}
-									}
-								}
-							],
-							"request": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Authorization",
-										"value": "Bearer {{accessToken}}",
-										"type": "text"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\r\n\"name\": \"{{name_supplier}}\", \r\n  // Supplier Name: \r\n  // - Required field\r\n  // - Length should be between 3 and 100 characters\r\n\r\n  \"contact_name\": \"{{contact_name}}\", \r\n  // Contact Name of the Supplier: \r\n  // - Required field\r\n  // - Maximum length: 100 characters\r\n\r\n  \"contact_email\": \"{{contact_email}}\", \r\n  // Contact Email: \r\n  // - Required field\r\n  // - Must be in a valid email format (e.g., containing \"@\" with a proper domain)\r\n  // - Maximum length: 20 characters\r\n\r\n  \"phone_number\": \"{{phone_number}}\", \r\n  // Phone Number: \r\n  // - Optional field\r\n  // - Maximum length: 15 characters, can include only digits and the \"+\" sign\r\n\r\n  \"address\": \"{{address}}\", \r\n  // Supplier Address: \r\n  // - Optional field\r\n  // - Maximum length: 200 characters\r\n  // - Can include only letters and numbers\r\n\r\n  \"country\": \"{{country}}\", \r\n  // Country of Supplier: \r\n  // - Optional field\r\n  // - Maximum length: 50 characters\r\n  // - Can include only letters\r\n\r\n  \"city\": \"{{city}}\", \r\n  // City of Supplier: \r\n  // - Optional field\r\n  // - Maximum length: 50 characters\r\n  // - Can include only letters, spaces, or hyphens\r\n\r\n  \"website\": \"{{website}}\" \r\n  // Supplier Website: \r\n  // - Optional field\r\n  // - Must be a valid URL\r\n}",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
+										"packages": {},
+										"exec": [
+											"function getRandomName () {\r",
+											"    const characters = \"qazwsxedcrfvtgbyhnujmikolp1234567890\";\r",
+											"    const letters = \"qazwsxedcrfvtgbyhnujmikolp\";\r",
+											"    const lenght = Math.floor((100 - 3 + 1) * Math.random()) + 3;\r",
+											"    let name_product = \"\";\r",
+											"\r",
+											"    name_product += letters.charAt(Math.floor(Math.random()*letters.length)).toUpperCase();\r",
+											"\r",
+											"    for (let i = 1; i < lenght; i++){\r",
+											"        name_product += characters.charAt(Math.floor(Math.random() * characters.length));        \r",
+											"    }\r",
+											"    return name_product;\r",
+											"}\r",
+											"\r",
+											"function getDescriptions () {\r",
+											"    const symbols = () => String.fromCharCode(Math.floor(Math.random() * (126 - 33 + 1)) + 33);\r",
+											"    const length = Math.floor(Math.random () * (500 - 1 + 1)) + 1;\r",
+											"    let description_product = \"\";\r",
+											"    for (let i = 0; i < length; i++){\r",
+											"        description_product += symbols();\r",
+											"    }\r",
+											"    return description_product = description_product.replace(/[\"\\\\{}[\\],:<>|/'^~`=()&]/g, \"\");\r",
+											"}\r",
+											"\r",
+											"function getCategory () {\r",
+											"    const length = Math.floor(Math.random() * (50 - 1 + 1)) + 1;\r",
+											"    const symbols = \"qazwsxedcrfvtgbyhnujikmolp1234567890\";\r",
+											"    let category_product = \"\";\r",
+											"    for (let i =0; i < length; i++){\r",
+											"        category_product += symbols.charAt(Math.floor (Math.random() * symbols.length));    \r",
+											"    }\r",
+											"    return category_product;\r",
+											"}\r",
+											"\r",
+											"function getPrice () {\r",
+											"    const length = Math.floor(Math.random() * (6 - 1 + 1))+1;\r",
+											"    const length2 = 2;\r",
+											"    const numbers = \"0123456789\";\r",
+											"    let Price_product = \"\";\r",
+											"    let Price_product2 = \"\";\r",
+											"     // Create the integer part (before the decimal point)\r",
+											"    for (let i = 0; i < length; i++) {\r",
+											"        // To avoid leading zeros, the first digit is from 1-9\r",
+											"        if (i === 0) {\r",
+											"            Price_product += numbers.charAt(Math.floor(Math.random() * 9) + 1); // Random from 1-9\r",
+											"        } else {\r",
+											"            Price_product += numbers.charAt(Math.floor(Math.random() * numbers.length)); // Random from 0-9\r",
+											"        }\r",
+											"    }\r",
+											"     for (let k=0; k < length2; k++) {\r",
+											"        Price_product2 += numbers.charAt(Math.floor(Math.random() * numbers.length));\r",
+											"    }\r",
+											"    return Price_product + '.' + Price_product2;\r",
+											"}\r",
+											"\r",
+											"function getQuantity() {\r",
+											"    const length = Math.floor(Math.random() * (6 - 1 + 1)) + 1; // Random length between 1 and 10\r",
+											"    const numbers = \"0123456789\";\r",
+											"    let quantity_product = \"\";\r",
+											"\r",
+											"    // If length is greater than 1, ensure the first digit is not '0'\r",
+											"    if (length === 1) {\r",
+											"        // For length 1, any digit is fine, including '0'\r",
+											"        quantity_product += numbers.charAt(Math.floor(Math.random() * numbers.length));\r",
+											"    } else {\r",
+											"        // For length > 1, the first digit must not be '0'\r",
+											"        quantity_product += numbers.charAt(Math.floor(Math.random() * 9) + 1); // Random from 1-9\r",
+											"\r",
+											"        // Add subsequent digits which can be any from 0-9\r",
+											"        for (let i = 1; i < length; i++) {\r",
+											"            quantity_product += numbers.charAt(Math.floor(Math.random() * numbers.length)); // Random from 0-9\r",
+											"        }\r",
+											"    }\r",
+											"\r",
+											"    return quantity_product;\r",
+											"}\r",
+											"\r",
+											"function GetUrlProduct () {\r",
+											"    const maxLength = 255;\r",
+											"    const BaseUrl = \"https://example.com/\";\r",
+											"    const extensions = [\"png\", \"jpeg\", \"jpg\"];\r",
+											"    const characters = \"zaqxswcdevfrbgtnhymjukilopZAQXSWCDEVFRBGTNHYMJUKILOP0123456789\";\r",
+											"\r",
+											"    const filenamelength = Math.floor (Math.random() * (maxLength - BaseUrl.length - 5)) + 1;\r",
+											"\r",
+											"    let filename = \"\";\r",
+											"\r",
+											"    for (let i=0; i < filenamelength; i++) {\r",
+											"        filename += characters.charAt(Math.floor (Math.random() * characters.length));\r",
+											"    }\r",
+											"\r",
+											"    const extension = extensions[Math.floor(Math.random() * extensions.length)];\r",
+											"\r",
+											"    const url_product = `${BaseUrl}${filename}.${extension}`;\r",
+											"\r",
+											"    if (url_product.length > maxLength) {\r",
+											"        return GetUrlProduct();\r",
+											"    }\r",
+											"    return url_product;\r",
+											"}\r",
+											"\r",
+											"function getWeigth () {\r",
+											"    const length = Math.floor(Math.random() * (4 - 1 + 1))+1;\r",
+											"    const length2 = 2;\r",
+											"    const numbers = \"123456789\";\r",
+											"    const numbers2 = \"0123456789\";\r",
+											"    let Weigth_product = \"\";\r",
+											"    let Weigth_product2 = \"\";\r",
+											"     \r",
+											"     // Create the integer part (before the decimal point)\r",
+											"    for (let i = 0; i < length; i++) {\r",
+											"  \r",
+											"            Weigth_product += numbers.charAt(Math.floor(Math.random() * numbers.length)); // Random from 1-9\r",
+											"        \r",
+											"    }\r",
+											"     for (let k=0; k < length2; k++) {\r",
+											"        Weigth_product2 += numbers2.charAt(Math.floor(Math.random() * numbers2.length));\r",
+											"    }\r",
+											"    return Weigth_product + '.' + Weigth_product2;\r",
+											"}\r",
+											"\r",
+											"function getDimensions() {\r",
+											"    const numbers = \"123456789\"; // Avoid leading zero\r",
+											"    const allNumbers = \"0123456789\";\r",
+											"\r",
+											"    // Ensure three non-zero lengths\r",
+											"    let length1 = Math.floor(Math.random() * 3) + 1; // At least 1 digit\r",
+											"    let length2 = Math.floor(Math.random() * 3) + 1; \r",
+											"    let length3 = Math.floor(Math.random() * 3) + 1;\r",
+											"\r",
+											"    let part1 = numbers.charAt(Math.floor(Math.random() * numbers.length)); // First digit non-zero\r",
+											"    for (let i = 1; i < length1; i++) {\r",
+											"        part1 += allNumbers.charAt(Math.floor(Math.random() * allNumbers.length));\r",
+											"    }\r",
+											"\r",
+											"    let part2 = numbers.charAt(Math.floor(Math.random() * numbers.length));\r",
+											"    for (let i = 1; i < length2; i++) {\r",
+											"        part2 += allNumbers.charAt(Math.floor(Math.random() * allNumbers.length));\r",
+											"    }\r",
+											"\r",
+											"    let part3 = numbers.charAt(Math.floor(Math.random() * numbers.length));\r",
+											"    for (let i = 1; i < length3; i++) {\r",
+											"        part3 += allNumbers.charAt(Math.floor(Math.random() * allNumbers.length));\r",
+											"    }\r",
+											"\r",
+											"    return `${part1}x${part2}x${part3}`;\r",
+											"}\r",
+											"\r",
+											"function getManufacturer () {\r",
+											"    const length = Math.floor(Math.random() * (100)) + 1;\r",
+											"    const characters = \"qazwsxedcrfvtgbyhnujikmolp1234567890\";\r",
+											"    let manufacturer_product = \"\";\r",
+											"    for (let i =0; i < length; i++){\r",
+											"        manufacturer_product += characters.charAt(Math.floor (Math.random() * characters.length));    \r",
+											"    }\r",
+											"    return manufacturer_product;\r",
+											"}\r",
+											"\r",
+											"pm.environment.set(\"name_product\", getRandomName());\r",
+											"const name_product = pm.environment.get (\"name_product\");\r",
+											"\r",
+											"pm.environment.set(\"description_product\", getDescriptions());\r",
+											"const description = pm.environment.get (\"description_product\");\r",
+											"\r",
+											"pm.environment.set(\"category_product\", getCategory());\r",
+											"const category_product = pm.environment.get (\"category_product\");\r",
+											"\r",
+											"pm.environment.set(\"Price_product\", getPrice());\r",
+											"const Price_product = pm.environment.get (\"Price_product\");\r",
+											"\r",
+											"pm.environment.set(\"quantity_product\", getQuantity());\r",
+											"const quantity_product = pm.environment.get (\"quantity_product\");\r",
+											"\r",
+											"pm.environment.set(\"url_product\", GetUrlProduct());\r",
+											"const url_product = pm.environment.get (\"url_product\");\r",
+											"\r",
+											"pm.environment.set(\"Weigth_product\", getWeigth());\r",
+											"const Weigth_product = pm.environment.get (\"Weigth_product\");\r",
+											"\r",
+											"pm.environment.set(\"dimensions_product\", getDimensions());\r",
+											"const dimensions_product = pm.environment.get (\"dimensions_product\");\r",
+											"\r",
+											"pm.environment.set(\"manufacturer_product\", getManufacturer());\r",
+											"const manufacturer_product = pm.environment.get (\"manufacturer_product\");"
+										]
 									}
 								},
-								"url": {
-									"raw": "http://localhost:8002/suppliers/",
-									"protocol": "http",
-									"host": [
-										"localhost"
-									],
-									"port": "8002",
-									"path": [
-										"suppliers",
-										""
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Create_Supplier_all_field_200 Copy",
-							"event": [
 								{
 									"listen": "test",
 									"script": {
-										"exec": [
-											"pm.test (\"Status code is 201. The supplier was created.\", function () {\r",
-											"    pm.response.to.have.status(201)\r",
-											"});\r",
-											"\r",
-											"let response = pm.response.json();\r",
-											"\r",
-											"let supplierID = response.supplier_id;\r",
-											"\r",
-											"pm.environment.set (\"supplierID\", supplierID);\r",
-											"\r",
-											"\r",
-											""
-										],
 										"type": "text/javascript",
-										"packages": {}
-									}
-								},
-								{
-									"listen": "prerequest",
-									"script": {
+										"packages": {},
 										"exec": [
 											""
-										],
-										"type": "text/javascript",
-										"packages": {}
+										]
 									}
 								}
-							],
-							"request": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Authorization",
-										"value": "Bearer {{accessToken}}",
-										"type": "text"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\r\n  \"name\": \"{{name_supplier}}\", \r\n  // Supplier Name: \r\n  // - Required field\r\n  // - Length should be between 3 and 100 characters\r\n\r\n  \"contact_name\": \"{{contact_name}}\", \r\n  // Contact Name of the Supplier: \r\n  // - Required field\r\n  // - Maximum length: 100 characters\r\n\r\n  \"contact_email\": \"{{contact_email}}\", \r\n  // Contact Email: \r\n  // - Required field\r\n  // - Must be in a valid email format (e.g., containing \"@\" with a proper domain)\r\n  // - Maximum length: 20 characters\r\n\r\n  \"phone_number\": \"{{phone_number}}\", \r\n  // Phone Number: \r\n  // - Optional field\r\n  // - Maximum length: 15 characters, can include only digits and the \"+\" sign\r\n\r\n  \"address\": \"{{address}}\", \r\n  // Supplier Address: \r\n  // - Optional field\r\n  // - Maximum length: 200 characters\r\n  // - Can include only letters and numbers\r\n\r\n  \"country\": \"{{country}}\", \r\n  // Country of Supplier: \r\n  // - Optional field\r\n  // - Maximum length: 50 characters\r\n  // - Can include only letters\r\n\r\n  \"city\": \"{{city}}\", \r\n  // City of Supplier: \r\n  // - Optional field\r\n  // - Maximum length: 50 characters\r\n  // - Can include only letters, spaces, or hyphens\r\n\r\n  \"website\": \"200@\" \r\n  // Supplier Website: \r\n  // - Optional field\r\n  // - Must be a valid URL\r\n}",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "http://localhost:8002/suppliers/",
-									"protocol": "http",
-									"host": [
-										"localhost"
-									],
-									"port": "8002",
-									"path": [
-										"suppliers",
-										""
-									]
-								}
-							},
-							"response": []
+							]
 						},
 						{
-							"name": "Create_Supplier_only_mandatory_200",
-							"event": [
+							"name": "Retrieve_products",
+							"item": [
 								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test (\"Status code is 201. The supplier was created.\", function () {\r",
-											"    pm.response.to.have.status(201)\r",
-											"});\r",
-											"\r",
-											"let response = pm.response.json();\r",
-											"\r",
-											"let supplierID = response.supplier_id;\r",
-											"\r",
-											"pm.environment.set (\"supplierID\", supplierID);\r",
-											"\r",
-											"\r",
-											""
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								},
-								{
-									"listen": "prerequest",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								}
-							],
-							"request": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Authorization",
-										"value": "Bearer {{accessToken}}",
-										"type": "text"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\r\n  \"name\": \"{{name_supplier}}\", \r\n  // Supplier Name: \r\n  // - Required field\r\n  // - Length should be between 3 and 100 characters\r\n\r\n  \"contact_name\": \"{{contact_name}}\", \r\n  // Contact Name of the Supplier: \r\n  // - Required field\r\n  // - Maximum length: 100 characters\r\n\r\n  \"contact_email\": \"{{contact_email}}\" \r\n  // Contact Email: \r\n  // - Required field\r\n  // - Must be in a valid email format (e.g., containing \"@\" with a proper domain)\r\n  // - Maximum length: 20 characters\r\n\r\n}",
-									"options": {
-										"raw": {
-											"language": "json"
+									"name": "Retrieve_all_Products_200",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code is 200. The products was retrieved.\", function () {\r",
+													"    pm.response.to.have.status(200);\r",
+													"});\r",
+													"\r",
+													"const productId = pm.response.json().product_id;  // Assuming product_id is in the response body\r",
+													"pm.environment.set(\"product_id\", productId);\r",
+													"\r",
+													""
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
 										}
-									}
-								},
-								"url": {
-									"raw": "http://localhost:8002/suppliers/",
-									"protocol": "http",
-									"host": [
-										"localhost"
 									],
-									"port": "8002",
-									"path": [
-										"suppliers",
-										""
-									]
+									"request": {
+										"method": "GET",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{accessToken}}",
+												"type": "text"
+											}
+										],
+										"url": {
+											"raw": "{{base_url_products}}/products/",
+											"host": [
+												"{{base_url_products}}"
+											],
+											"path": [
+												"products",
+												""
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Retrieve_product_by_name_200",
+									"event": [
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													"\r",
+													"\r",
+													""
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										},
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code is 200. The product by name was retrieved.\", function () {\r",
+													"    pm.response.to.have.status(200);\r",
+													"});\r",
+													"\r",
+													"const productId = pm.response.json().product_id;  // Assuming product_id is in the response body\r",
+													"pm.environment.set(\"product_id\", productId);"
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										}
+									],
+									"request": {
+										"method": "GET",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{accessToken}}",
+												"type": "text"
+											},
+											{
+												"key": "",
+												"value": "",
+												"type": "text",
+												"disabled": true
+											}
+										],
+										"url": {
+											"raw": "{{base_url_products}}/search_products/?name={{name_product}}",
+											"host": [
+												"{{base_url_products}}"
+											],
+											"path": [
+												"search_products",
+												""
+											],
+											"query": [
+												{
+													"key": "name",
+													"value": "{{name_product}}"
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Retrieve__Product_by_ID_200",
+									"event": [
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													"\r",
+													""
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										},
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code is 200. The product by ID was retrieved.\", function () {\r",
+													"    pm.response.to.have.status(200);\r",
+													"});\r",
+													"\r",
+													"const productId = pm.response.json().product_id;  // Assuming product_id is in the response body\r",
+													"pm.environment.set(\"product_id\", productId);"
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										}
+									],
+									"request": {
+										"method": "GET",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{accessToken}}",
+												"type": "text"
+											}
+										],
+										"url": {
+											"raw": "http://localhost:8002/products/{{product_id}}",
+											"protocol": "http",
+											"host": [
+												"localhost"
+											],
+											"port": "8002",
+											"path": [
+												"products",
+												"{{product_id}}"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Retrieve_non_existing_Product_by_ID_404",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code is 404. The product not found.\", function () {\r",
+													"    pm.response.to.have.status(404);\r",
+													"});\r",
+													"\r",
+													"const productId = pm.response.json().product_id;  // Assuming product_id is in the response body\r",
+													"pm.environment.set(\"product_id\", productId);"
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										}
+									],
+									"request": {
+										"method": "GET",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{accessToken}}",
+												"type": "text"
+											}
+										],
+										"url": {
+											"raw": "http://localhost:8002/products/be53c59f-c7c7-434f-a8e9-960adc208419",
+											"protocol": "http",
+											"host": [
+												"localhost"
+											],
+											"port": "8002",
+											"path": [
+												"products",
+												"be53c59f-c7c7-434f-a8e9-960adc208419"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Retrieve_Product_with_invalide_uuid_by_ID_400",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test (\"Invalid product_id. Status code is 400\", function () {\r",
+													"    pm.response.to.have.status(400);\r",
+													"});"
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										}
+									],
+									"request": {
+										"method": "GET",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{accessToken}}",
+												"type": "text"
+											}
+										],
+										"url": {
+											"raw": "http://localhost:8002/products/null",
+											"protocol": "http",
+											"host": [
+												"localhost"
+											],
+											"port": "8002",
+											"path": [
+												"products",
+												"null"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Retrieve_Product_by_ID_unauthorzed_401",
+									"event": [
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													"pm.test (\"Invalid token or unauthorized access. Status code is 401\", function () {\r",
+													"    pm.response.to.have.status(401);\r",
+													"});"
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										}
+									],
+									"request": {
+										"method": "GET",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0Njg3ZDRhOC0wNmU5LTRmNzMtYjdkMy1lMzgwMjc4NDhmODgiLCJpc19zdXBlcmFkbWluIjpmYWxzZSwiZXhwIjoxNzMxMzM3MDEyfQ.h02FAUz4WIx46pxrvQJWI0NJmO0ZpTfacLsEWH24BA8",
+												"type": "text"
+											}
+										],
+										"url": {
+											"raw": "http://localhost:8002/products/{{product_id}}",
+											"protocol": "http",
+											"host": [
+												"localhost"
+											],
+											"port": "8002",
+											"path": [
+												"products",
+												"{{product_id}}"
+											]
+										}
+									},
+									"response": []
 								}
-							},
-							"response": []
+							]
 						},
 						{
-							"name": "Create_Supplier_duplicate_name_422",
-							"event": [
+							"name": "Update_product",
+							"item": [
 								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test (\"Status code is 422. The supplier is already exist.\", function () {\r",
-											"    pm.response.to.have.status(422)\r",
-											"});\r",
-											"\r",
-											"let response = pm.response.json();\r",
-											"\r",
-											"let supplierID = response.supplier_id;\r",
-											"\r",
-											"pm.environment.set (\"supplierID\", supplierID);\r",
-											"\r",
-											"\r",
-											""
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								},
-								{
-									"listen": "prerequest",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								}
-							],
-							"request": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Authorization",
-										"value": "Bearer {{accessToken}}",
-										"type": "text"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\r\n  \"name\": \"{{dup_name}}\", \r\n  // Supplier Name: \r\n  // - Required field\r\n  // - Length should be between 3 and 100 characters\r\n\r\n  \"contact_name\": \"{{contact_name}}\", \r\n  // Contact Name of the Supplier: \r\n  // - Required field\r\n  // - Maximum length: 100 characters\r\n\r\n  \"contact_email\": \"{{contact_email}}\", \r\n  // Contact Email: \r\n  // - Required field\r\n  // - Must be in a valid email format (e.g., containing \"@\" with a proper domain)\r\n  // - Maximum length: 20 characters\r\n\r\n  \"phone_number\": \"{{phone_number}}\", \r\n  // Phone Number: \r\n  // - Optional field\r\n  // - Maximum length: 15 characters, can include only digits and the \"+\" sign\r\n\r\n  \"address\": \"{{address}}\", \r\n  // Supplier Address: \r\n  // - Optional field\r\n  // - Maximum length: 200 characters\r\n  // - Can include only letters and numbers\r\n\r\n  \"country\": \"{{country}}\", \r\n  // Country of Supplier: \r\n  // - Optional field\r\n  // - Maximum length: 50 characters\r\n  // - Can include only letters\r\n\r\n  \"city\": \"{{city}}\", \r\n  // City of Supplier: \r\n  // - Optional field\r\n  // - Maximum length: 50 characters\r\n  // - Can include only letters, spaces, or hyphens\r\n\r\n  \"website\": \"{{website}}\" \r\n  // Supplier Website: \r\n  // - Optional field\r\n  // - Must be a valid URL\r\n}",
-									"options": {
-										"raw": {
-											"language": "json"
+									"name": "Update_product_empty_optional_fields_200",
+									"event": [
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													"function getNewRandomName() {\r",
+													"    const characters = \"qazwsxedcrfvtgbyhnujmikolp1234567890\";\r",
+													"    const lenght = Math.floor((100 - 3 + 1) * Math.random()) + 3;\r",
+													"    let New_name_product = \"\";\r",
+													"    for (let i = 0; i < lenght; i++) {\r",
+													"        New_name_product += characters.charAt(Math.floor(Math.random() * characters.length));\r",
+													"    }\r",
+													"    return New_name_product.charAt(0).toUpperCase() + New_name_product.slice(1);\r",
+													"}\r",
+													"\r",
+													"function getNewDescriptions() {\r",
+													"    const symbols = () => String.fromCharCode(Math.floor(Math.random() * (126 - 33 + 1)) + 33);\r",
+													"    const length = Math.floor(Math.random() * (500 - 1 + 1)) + 1;\r",
+													"    let New_description_product = \"\";\r",
+													"    for (let i = 0; i < length; i++) {\r",
+													"        New_description_product += symbols();\r",
+													"    }\r",
+													"    return New_description_product.replace(/[\"\\\\{}[\\],:<>|/'^~`=()&]/g, \"\");\r",
+													"}\r",
+													"\r",
+													"function getNewCategory() {\r",
+													"    const length = Math.floor(Math.random() * (50 - 1 + 1)) + 1;\r",
+													"    const symbols = \"qazwsxedcrfvtgbyhnujikmolp1234567890\";\r",
+													"    let New_category_product = \"\";\r",
+													"    for (let i = 0; i < length; i++) {\r",
+													"        New_category_product += symbols.charAt(Math.floor(Math.random() * symbols.length));\r",
+													"    }\r",
+													"    return New_category_product;\r",
+													"}\r",
+													"\r",
+													"function getNewPrice() {\r",
+													"    const length = Math.floor(Math.random() * (6 - 1 + 1)) + 1;\r",
+													"    const length2 = 2;\r",
+													"    const numbers = \"0123456789\";\r",
+													"    let New_Price_product = \"\";\r",
+													"    let New_Price_product2 = \"\";\r",
+													"    for (let i = 0; i < length; i++) {\r",
+													"        if (i === 0) {\r",
+													"            New_Price_product += numbers.charAt(Math.floor(Math.random() * 9) + 1);\r",
+													"        } else {\r",
+													"            New_Price_product += numbers.charAt(Math.floor(Math.random() * numbers.length));\r",
+													"        }\r",
+													"    }\r",
+													"    for (let k = 0; k < length2; k++) {\r",
+													"        New_Price_product2 += numbers.charAt(Math.floor(Math.random() * numbers.length));\r",
+													"    }\r",
+													"    return New_Price_product + '.' + New_Price_product2;\r",
+													"}\r",
+													"\r",
+													"function getNewQuantity() {\r",
+													"    const length = Math.floor(Math.random() * (6 - 1 + 1)) + 1;\r",
+													"    const numbers = \"0123456789\";\r",
+													"    let New_quantity_product = \"\";\r",
+													"    if (length === 1) {\r",
+													"        New_quantity_product += numbers.charAt(Math.floor(Math.random() * numbers.length));\r",
+													"    } else {\r",
+													"        New_quantity_product += numbers.charAt(Math.floor(Math.random() * 9) + 1);\r",
+													"        for (let i = 1; i < length; i++) {\r",
+													"            New_quantity_product += numbers.charAt(Math.floor(Math.random() * numbers.length));\r",
+													"        }\r",
+													"    }\r",
+													"    return New_quantity_product;\r",
+													"}\r",
+													"\r",
+													"function getNewUrlProduct() {\r",
+													"    const maxLength = 255;\r",
+													"    const BaseUrl = \"https://example.com/\";\r",
+													"    const extensions = [\"png\", \"jpeg\", \"jpg\"];\r",
+													"    const characters = \"zaqxswcdevfrbgtnhymjukilopZAQXSWCDEVFRBGTNHYMJUKILOP0123456789\";\r",
+													"    const filenamelength = Math.floor(Math.random() * (maxLength - BaseUrl.length - 5)) + 1;\r",
+													"    let New_filename = \"\";\r",
+													"    for (let i = 0; i < filenamelength; i++) {\r",
+													"        New_filename += characters.charAt(Math.floor(Math.random() * characters.length));\r",
+													"    }\r",
+													"    const extension = extensions[Math.floor(Math.random() * extensions.length)];\r",
+													"    const New_url_product = `${BaseUrl}${New_filename}.${extension}`;\r",
+													"    if (New_url_product.length > maxLength) {\r",
+													"        return getNewUrlProduct();\r",
+													"    }\r",
+													"    return New_url_product;\r",
+													"}\r",
+													"\r",
+													"function getNewWeigth() {\r",
+													"    const length = Math.floor(Math.random() * (4 - 1 + 1)) + 1;\r",
+													"    const length2 = 2;\r",
+													"    const numbers = \"123456789\";\r",
+													"    const numbers2 = \"0123456789\";\r",
+													"    let New_Weigth_product = \"\";\r",
+													"    let New_Weigth_product2 = \"\";\r",
+													"    for (let i = 0; i < length; i++) {\r",
+													"        New_Weigth_product += numbers.charAt(Math.floor(Math.random() * numbers.length));\r",
+													"    }\r",
+													"    for (let k = 0; k < length2; k++) {\r",
+													"        New_Weigth_product2 += numbers2.charAt(Math.floor(Math.random() * numbers2.length));\r",
+													"    }\r",
+													"    return New_Weigth_product + '.' + New_Weigth_product2;\r",
+													"}\r",
+													"\r",
+													"function getNewDimensions() {\r",
+													"    const length1 = Math.floor(Math.random() * (96)) + 1;\r",
+													"    const length2 = Math.floor(Math.random() * (100 - length1 - 2)) + 1;\r",
+													"    const lenght3 = 100 - length1 - length2 - 2;\r",
+													"    const numbers = \"0123456789\";\r",
+													"    let New_part1 = \"\";\r",
+													"    let New_part2 = \"\";\r",
+													"    let New_part3 = \"\";\r",
+													"    for (let i = 0; i < length1; i++) {\r",
+													"        New_part1 += numbers.charAt(Math.floor(Math.random() * numbers.length));\r",
+													"    }\r",
+													"    if (New_part1[0] === 0 && length1 > 1) {\r",
+													"        New_part1 = New_part1.replace('0', Math.floor(Math.random() * 9) + 1);\r",
+													"    }\r",
+													"    for (let i = 0; i < length2; i++) {\r",
+													"        New_part2 += numbers.charAt(Math.floor(Math.random() * numbers.length));\r",
+													"    }\r",
+													"    if (New_part2[0] === 0 && length2 > 1) {\r",
+													"        New_part2 = New_part2.replace('0', Math.floor(Math.random() * 9) + 1);\r",
+													"    }\r",
+													"    for (let i = 0; i < lenght3; i++) {\r",
+													"        New_part3 += numbers.charAt(Math.floor(Math.random() * numbers.length));\r",
+													"    }\r",
+													"    if (New_part3[0] === 0 && lenght3 > 1) {\r",
+													"        New_part3 = New_part3.replace('0', Math.floor(Math.random() * 9) + 1);\r",
+													"    }\r",
+													"    return New_part1 + 'x' + New_part2 + 'x' + New_part3;\r",
+													"}\r",
+													"\r",
+													"function getNewManufacturer() {\r",
+													"    const length = Math.floor(Math.random() * (100)) + 1;\r",
+													"    const characters = \"qazwsxedcrfvtgbyhnujikmolp1234567890\";\r",
+													"    let New_manufacturer_product = \"\";\r",
+													"    for (let i = 0; i < length; i++) {\r",
+													"        New_manufacturer_product += characters.charAt(Math.floor(Math.random() * characters.length));\r",
+													"    }\r",
+													"    return New_manufacturer_product;\r",
+													"}\r",
+													"\r",
+													"pm.environment.set(\"New_name_product\", getNewRandomName());\r",
+													"const New_name_product = pm.environment.get(\"New_name_product\");\r",
+													"console.log(New_name_product);\r",
+													"\r",
+													"pm.environment.set(\"New_description_product\", getNewDescriptions());\r",
+													"const New_description = pm.environment.get(\"New_description_product\");\r",
+													"console.log(New_description);\r",
+													"\r",
+													"pm.environment.set(\"New_category_product\", getNewCategory());\r",
+													"const New_category_product = pm.environment.get(\"New_category_product\");\r",
+													"\r",
+													"pm.environment.set(\"New_Price_product\", getNewPrice());\r",
+													"const New_Price_product = pm.environment.get(\"New_Price_product\");\r",
+													"\r",
+													"pm.environment.set(\"New_quantity_product\", getNewQuantity());\r",
+													"const New_quantity_product = pm.environment.get(\"New_quantity_product\");\r",
+													"\r",
+													"pm.environment.set(\"New_url_product\", getNewUrlProduct());\r",
+													"const New_url_product = pm.environment.get(\"New_url_product\");\r",
+													"\r",
+													"pm.environment.set(\"New_Weigth_product\", getNewWeigth());\r",
+													"const New_Weigth_product = pm.environment.get(\"New_Weigth_product\");\r",
+													"\r",
+													"pm.environment.set(\"New_dimensions_product\", getNewDimensions());\r",
+													"const New_dimensions_product = pm.environment.get(\"New_dimensions_product\");\r",
+													"\r",
+													"pm.environment.set(\"New_manufacturer_product\", getNewManufacturer());\r",
+													"const New_Newmanufacturer_product = pm.environment.get(\"New_manufacturer_product\");"
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										},
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test (\"Status code is 200 OK!\", function () {\r",
+													"    pm.response.to.have (200);\r",
+													"});\r",
+													"\r",
+													"const name_product = pm.environment.get (\"name_product\");"
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
 										}
-									}
-								},
-								"url": {
-									"raw": "http://localhost:8002/suppliers/",
-									"protocol": "http",
-									"host": [
-										"localhost"
 									],
-									"port": "8002",
-									"path": [
-										"suppliers",
-										""
-									]
+									"request": {
+										"method": "PUT",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{accessToken}}",
+												"type": "text"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\r\n  \"name\": \"{{New_name_product}}\",\r\n  \"description\": \"{{New_description_product}}\",\r\n  \"category\": \"{{New_category_product}}\",\r\n  \"price\": {{New_Price_product}},\r\n  \"stock_quantity\": {{New_quantity_product}},\r\n  \"supplier_id\": \"{{supplierID}}\",\r\n  \"image_url\": \"{{New_url_product}}\",\r\n  \"weight\": \"{{New_Weigth_product}}\",\r\n  \"dimensions\": \"{{New_dimensions_product}}\",\r\n  \"manufacturer\": \"{{New_manufacturer_product}}\"\r\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{base_url_products}}/products/{{product_id}}",
+											"host": [
+												"{{base_url_products}}"
+											],
+											"path": [
+												"products",
+												"{{product_id}}"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Update_product_only_mandatory_fieds_200",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"The product was updated\", function(){\r",
+													"    pm.response.to.have.status(200);\r",
+													"});"
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										}
+									],
+									"request": {
+										"method": "PUT",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{accessToken}}",
+												"type": "text"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\r\n  \"name\": \"{{name_product}}\",\r\n  \"price\": 50.26,\r\n  \"stock_quantity\": {{quantity_product}},\r\n  \"supplier_id\": \"{{supplierID}}\"  \r\n}\r\n",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "http://localhost:8002/products/{{product_id}}",
+											"protocol": "http",
+											"host": [
+												"localhost"
+											],
+											"port": "8002",
+											"path": [
+												"products",
+												"{{product_id}}"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Update_product_empty_body_request_422",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"The mandatory fields was missed.\", function() {\r",
+													"    pm.response.to.have.status(422);\r",
+													"})"
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										}
+									],
+									"request": {
+										"method": "PUT",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{accessToken}}",
+												"type": "text"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\r\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "http://localhost:8002/products/{{product_id}}",
+											"protocol": "http",
+											"host": [
+												"localhost"
+											],
+											"port": "8002",
+											"path": [
+												"products",
+												"{{product_id}}"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "update_product_missed_mandatory_fileds_422",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"The mandatory field was missed.\", function() {\r",
+													"pm.response.to.have.status(422); })"
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										}
+									],
+									"request": {
+										"method": "PUT",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{accessToken}}",
+												"type": "text"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\r\n\r\n  \"category\": \"{{New_category_product}}\",\r\n  \"price\": {{New_Price_product}},\r\n  \"stock_quantity\": {{New_quantity_product}},\r\n  \"supplier_id\": \"{{supplierID}}\",\r\n  \"image_url\": \"{{New_url_product}}\",\r\n  \"weight\": \"{{New_Weigth_product}}\",\r\n  \"dimensions\": \"{{New_dimensions_product}}\",\r\n  \"manufacturer\": \"{{New_manufacturer_product}}\"\r\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "http://localhost:8002/products/{{product_id}}",
+											"protocol": "http",
+											"host": [
+												"localhost"
+											],
+											"port": "8002",
+											"path": [
+												"products",
+												"{{product_id}}"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "update_non_existing_product_404",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code is 404. The product not found.\", function () {\r",
+													"    pm.response.to.have.status(404);\r",
+													"});"
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										}
+									],
+									"request": {
+										"method": "PUT",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{accessToken}}",
+												"type": "text"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\r\n  \"name\": \"{{New_name_product}}\",\r\n  \"description\": \"{{New_description_product}}\",\r\n  \"category\": \"{{New_category_product}}\",\r\n  \"price\": {{New_Price_product}},\r\n  \"stock_quantity\": {{New_quantity_product}},\r\n  \"supplier_id\": \"{{supplierID}}\",\r\n  \"image_url\": \"{{New_url_product}}\",\r\n  \"weight\": \"{{New_Weigth_product}}\",\r\n  \"dimensions\": \"{{New_dimensions_product}}\",\r\n  \"manufacturer\": \"{{New_manufacturer_product}}\"\r\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "http://localhost:8002/products/c59ac3e0-e316-4390-ab82-1926fc8af6ac",
+											"protocol": "http",
+											"host": [
+												"localhost"
+											],
+											"port": "8002",
+											"path": [
+												"products",
+												"c59ac3e0-e316-4390-ab82-1926fc8af6ac"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "update_product_unauthorized_401",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test (\"Invalid token or unauthorized access. Status code is 401\", function () {\r",
+													"    pm.response.to.have.status(401);\r",
+													"});"
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										}
+									],
+									"request": {
+										"method": "PUT",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer eyJhbGciOiJIuzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0ZTg3YjMyMy0yNjgyLTRhNmMtYThjYy00YzRmNWY5MGNjNDkiLCJpc19zdXBlcmFkbWluIjpmYWxzZSwiZXhwIjoxNzQ0MDQ0Mzg5fQ.L8eRYsQZn-nVopAAyg8leda5FmGLmLDdVlnBnlpmRlw",
+												"type": "text"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\r\n  \"name\": \"{{New_name_product}}\",\r\n  \"description\": \"{{New_description_product}}\",\r\n  \"category\": \"{{New_category_product}}\",\r\n  \"price\": {{New_Price_product}},\r\n  \"stock_quantity\": {{New_quantity_product}},\r\n  \"supplier_id\": \"{{supplierID}}\",\r\n  \"image_url\": \"{{New_url_product}}\",\r\n  \"weight\": \"{{New_Weigth_product}}\",\r\n  \"dimensions\": \"{{New_dimensions_product}}\",\r\n  \"manufacturer\": \"{{New_manufacturer_product}}\"\r\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "http://localhost:8002/products/{{product_id}}",
+											"protocol": "http",
+											"host": [
+												"localhost"
+											],
+											"port": "8002",
+											"path": [
+												"products",
+												"{{product_id}}"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "update_product_is_available_200",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test (\"The is_available was updated.\", function(){\r",
+													"    pm.response.to.have.status(200)\r",
+													"})"
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										}
+									],
+									"request": {
+										"method": "PATCH",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "bearer {{accessToken}}",
+												"type": "text"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\r\n\r\n  \"is_available\": false\r\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{base_url_products}}/products/{{product_id}}",
+											"host": [
+												"{{base_url_products}}"
+											],
+											"path": [
+												"products",
+												"{{product_id}}"
+											]
+										}
+									},
+									"response": []
 								}
-							},
-							"response": []
+							]
 						},
 						{
-							"name": "Create_Supplier_all_field_200 Copy",
-							"event": [
+							"name": "Delete_product",
+							"item": [
 								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test (\"Status code is 201. The supplier was created.\", function () {\r",
-											"    pm.response.to.have.status(201)\r",
-											"});\r",
-											"\r",
-											"const supplierID = pm.response.json().supplier_id;\r",
-											"\r",
-											"pm.environment.set (\"supplierID\", supplierID);\r",
-											"\r",
-											"console.log(\"Supplier ID:\", supplierID);\r",
-											"\r",
-											"\r",
-											""
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								},
-								{
-									"listen": "prerequest",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								}
-							],
-							"request": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Authorization",
-										"value": "Bearer {{accessToken}}",
-										"type": "text"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\r\n  \"name\": \"{{name_supplier}}\", \r\n  // Supplier Name: \r\n  // - Required field\r\n  // - Length should be between 3 and 100 characters\r\n\r\n  \"contact_name\": \"{{contact_name}}\", \r\n  // Contact Name of the Supplier: \r\n  // - Required field\r\n  // - Maximum length: 100 characters\r\n\r\n  \"contact_email\": \"{{e_mail}}\", \r\n  // Contact Email: \r\n  // - Required field\r\n  // - Must be in a valid email format (e.g., containing \"@\" with a proper domain)\r\n  // - Maximum length: 20 characters\r\n\r\n  \"phone_number\": \"{{phone_number}}\", \r\n  // Phone Number: \r\n  // - Optional field\r\n  // - Maximum length: 15 characters, can include only digits and the \"+\" sign\r\n\r\n  \"address\": \"{{address}}\", \r\n  // Supplier Address: \r\n  // - Optional field\r\n  // - Maximum length: 200 characters\r\n  // - Can include only letters and numbers\r\n\r\n  \"country\": \"{{country}}\", \r\n  // Country of Supplier: \r\n  // - Optional field\r\n  // - Maximum length: 50 characters\r\n  // - Can include only letters\r\n\r\n  \"city\": \"{{city}}\", \r\n  // City of Supplier: \r\n  // - Optional field\r\n  // - Maximum length: 50 characters\r\n  // - Can include only letters, spaces, or hyphens\r\n\r\n  \"website\": \"{{website}}\" \r\n  // Supplier Website: \r\n  // - Optional field\r\n  // - Must be a valid URL\r\n}",
-									"options": {
-										"raw": {
-											"language": "json"
+									"name": "Delete_product_200",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test (\"Status code is 200. The product was deleted.\", function(){\r",
+													"    pm.response.to.have.status(200);\r",
+													"});"
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
 										}
-									}
-								},
-								"url": {
-									"raw": "http://localhost:8002/suppliers/",
-									"protocol": "http",
-									"host": [
-										"localhost"
 									],
-									"port": "8002",
-									"path": [
-										"suppliers",
-										""
-									]
+									"request": {
+										"method": "DELETE",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{accessToken}}",
+												"type": "text"
+											}
+										],
+										"url": {
+											"raw": "http://localhost:8002/products/{{product_id}}",
+											"protocol": "http",
+											"host": [
+												"localhost"
+											],
+											"port": "8002",
+											"path": [
+												"products",
+												"{{product_id}}"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Delete_product_unauthorized_401",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test (\"Status cide is 401. Invalid token or unauthorized access.\", function() {\r",
+													"    pm.response.to.have.status(401);\r",
+													"});"
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										}
+									],
+									"request": {
+										"method": "DELETE",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0ZTg3YjMyMy0yNjgyLTRhNmMtYThjYy00YzrmNWY5MGNjNDkiLCJpc19zdXBlcmFkbWluIjpmYWxzZSwiZXhwIjoxNzQ0MDQ0NzQ2fQ.n-00z1IhkEm6faIgeaeXH5u5GA0zlRtdh1uXQfIPFjI",
+												"type": "text"
+											}
+										],
+										"url": {
+											"raw": "http://localhost:8002/products/{{product_id}}",
+											"protocol": "http",
+											"host": [
+												"localhost"
+											],
+											"port": "8002",
+											"path": [
+												"products",
+												"{{product_id}}"
+											],
+											"query": [
+												{
+													"key": "",
+													"value": null,
+													"disabled": true
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Delete_non_existing_product_404",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test (\"Status code is 404. The product not found.\", function(){\r",
+													"    pm.response.to.have.status(404);\r",
+													"});"
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										}
+									],
+									"request": {
+										"method": "DELETE",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{accessToken}}",
+												"type": "text"
+											}
+										],
+										"url": {
+											"raw": "http://localhost:8002/products/739d5fdd-82fc-45c9-a2d2-f832c2b4c00e",
+											"protocol": "http",
+											"host": [
+												"localhost"
+											],
+											"port": "8002",
+											"path": [
+												"products",
+												"739d5fdd-82fc-45c9-a2d2-f832c2b4c00e"
+											],
+											"query": [
+												{
+													"key": "",
+													"value": null,
+													"disabled": true
+												}
+											]
+										}
+									},
+									"response": []
 								}
-							},
-							"response": []
-						}
-					],
-					"event": [
-						{
-							"listen": "prerequest",
-							"script": {
-								"type": "text/javascript",
-								"packages": {},
-								"exec": [
-									"// Supplier Name:\r",
-									"// - Required field\r",
-									"// - Length should be between 3 and 100 characters\r",
-									"function getRandomNameSupplier() {\r",
-									"    const lettersDigits = \"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 \";\r",
-									"    const length = Math.floor(Math.random() * (100 - 3 + 1)) + 3;\r",
-									"    let name_supplier = \"\";\r",
-									"\r",
-									"    // Ensure the first character is a letter\r",
-									"    const letters = \"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ\";\r",
-									"    name_supplier += letters.charAt(Math.floor(Math.random() * letters.length));\r",
-									"\r",
-									"    // Generate the remaining characters\r",
-									"    for (let i = 1; i < length; i++) {\r",
-									"        name_supplier += lettersDigits.charAt(Math.floor(Math.random() * lettersDigits.length));\r",
-									"    }\r",
-									"\r",
-									"    return name_supplier;\r",
-									"}\r",
-									"\r",
-									"// Contact Name of the Supplier:\r",
-									"// - Required field\r",
-									"// - Maximum length: 100 characters\r",
-									"// - Can only contain letters, digits, and spaces\r",
-									"\r",
-									"function getRandomContactName() {\r",
-									"    const characters = \"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 \";\r",
-									"    const maxLength = 100;\r",
-									"    const length = Math.floor(Math.random() * maxLength) + 1;\r",
-									"    let contactName = \"\";\r",
-									"\r",
-									"    for (let i = 0; i < length; i++) {\r",
-									"        contactName += characters.charAt(Math.floor(Math.random() * characters.length));\r",
-									"    }\r",
-									"\r",
-									"    return contactName.trim(); // Trim to remove leading/trailing spaces\r",
-									"}\r",
-									"\r",
-									"// Contact Email:\r",
-									"// - Required field\r",
-									"// - Must be in a valid email format (e.g., containing \"@\" with a proper domain)\r",
-									"// - Maximum length: 20 characters\r",
-									"function getRandomemail() {\r",
-									"    const letters = \"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ\";\r",
-									"    const characters = \"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789\";\r",
-									"    \r",
-									"    const minLocalPartLength = 15;  // Minimum length for the local part\r",
-									"    const maxLocalPartLength = 20;  // Maximum length for the local part\r",
-									"    const localPartLength = Math.floor(Math.random() * (maxLocalPartLength - minLocalPartLength + 1)) + minLocalPartLength; // 15-20 characters\r",
-									"    \r",
-									"    const domainLength = Math.floor(Math.random() * 4) + 3; // 3-6 characters for the domain\r",
-									"    const extensionLength = Math.floor(Math.random() * 2) + 2; // 2-3 characters for the extension\r",
-									"\r",
-									"    let localPart = \"\";\r",
-									"    let domain = \"\";\r",
-									"    let extension = \"\";\r",
-									"\r",
-									"    // Ensure the first character of the local part is a letter\r",
-									"    localPart += letters.charAt(Math.floor(Math.random() * letters.length));\r",
-									"\r",
-									"    // Generate the remaining characters of the local part\r",
-									"    for (let i = 1; i < localPartLength; i++) {\r",
-									"        localPart += characters.charAt(Math.floor(Math.random() * characters.length));\r",
-									"    }\r",
-									"\r",
-									"    // Ensure the domain starts with a letter\r",
-									"    domain += letters.charAt(Math.floor(Math.random() * letters.length));\r",
-									"\r",
-									"    // Generate the remaining characters of the domain\r",
-									"    for (let i = 1; i < domainLength; i++) {\r",
-									"        domain += letters.charAt(Math.floor(Math.random() * letters.length));\r",
-									"    }\r",
-									"\r",
-									"    // Generate the extension (TLD)\r",
-									"    for (let i = 0; i < extensionLength; i++) {\r",
-									"        extension += letters.charAt(Math.floor(Math.random() * letters.length));\r",
-									"    }\r",
-									"\r",
-									"    // Return the generated email address\r",
-									"    return `${localPart}@${domain}.${extension}`;\r",
-									"}\r",
-									"// Phone Number:\r",
-									"// - Optional field\r",
-									"// - Maximum length: 15 characters, can include only digits and the \"+\" sign\r",
-									"function getRandomPhoneNumber() {\r",
-									"    const numbers = \"0123456789\";\r",
-									"    const length = Math.floor(Math.random() * 4 ) + 11; // From 11 to 15\r",
-									"    let phone_number = \"\";\r",
-									"\r",
-									"    phone_number += numbers.charAt(Math.floor(Math.random() * numbers.length));\r",
-									"\r",
-									"    for (let i = 1; i < length; i++) {\r",
-									"        phone_number += numbers.charAt(Math.floor(Math.random() * numbers.length));\r",
-									"    } \r",
-									"\r",
-									"    // Return the generated phone number\r",
-									"    return \"+\" + phone_number;\r",
-									"}\r",
-									"\r",
-									"// Supplier Address:\r",
-									"// - Optional field\r",
-									"// - Maximum length: 200 characters\r",
-									"// - Can include only letters and numbers\r",
-									"function getRandomAddress() {\r",
-									"    const characters = \"qazwsxedcrfvtgbyhnujmikolpZAQXSWCDEVFRBGTNHYMJUKILOP0123456789\";\r",
-									"    const letters = \"qazwsxedcrfvtgbyhnujmikolp\";\r",
-									"\r",
-									"    const length = Math.floor(Math.random() * 200 ) + 1; // From 1 to 200\r",
-									"    let address = \"\";\r",
-									"\r",
-									"    address += letters.charAt(Math.floor(Math.random() * letters.length)).toUpperCase();\r",
-									"    \r",
-									"    for (let i = 1; i < length; i++) {\r",
-									"        address += characters.charAt(Math.floor(Math.random() * characters.length));\r",
-									"    } \r",
-									"\r",
-									"    return address;\r",
-									"}\r",
-									"\r",
-									"// Country of Supplier:\r",
-									"// - Optional field\r",
-									"// - Maximum length: 50 characters\r",
-									"// - Can include only letters\r",
-									"function getRandomCountry() {\r",
-									"    const letters = \"qazwsxedcrfvtgbyhnujmikolp\";\r",
-									"\r",
-									"    const length = Math.floor(Math.random() * 50 ) + 1; // From 1 to 50\r",
-									"    let country = \"\";\r",
-									"\r",
-									"    country += letters.charAt(Math.floor(Math.random() * letters.length)).toUpperCase();\r",
-									"    \r",
-									"    for (let i = 1; i < length; i++) {\r",
-									"        country += letters.charAt(Math.floor(Math.random() * letters.length));\r",
-									"    } \r",
-									"\r",
-									"    return country;\r",
-									"}\r",
-									"\r",
-									"// City of Supplier:\r",
-									"// - Optional field\r",
-									"// - Maximum length: 50 characters\r",
-									"// - Can include only letters, spaces, or hyphens\r",
-									"function getRandomCity() {\r",
-									"    const letters = \"qazwsxedcrfvtgbyhnujmikolp\";  // Only letters\r",
-									"    const length = Math.floor(Math.random() * 50) + 1;  // Random length between 1 and 50\r",
-									"    let city = \"\";\r",
-									"\r",
-									"    // Always start with an uppercase letter\r",
-									"    city += letters.charAt(Math.floor(Math.random() * letters.length)).toUpperCase();\r",
-									"\r",
-									"    // Generate the remaining part of the city name\r",
-									"    for (let i = 1; i < length; i++) {\r",
-									"        // Choose a random letter from the list\r",
-									"        let randomChar = letters.charAt(Math.floor(Math.random() * letters.length));\r",
-									"        city += randomChar;\r",
-									"    }\r",
-									"\r",
-									"    return city;\r",
-									"}\r",
-									"\r",
-									"// Supplier Website:\r",
-									"// - Optional field\r",
-									"// - Must be a valid URL\r",
-									"function getRandomWebSite() {\r",
-									"    const letters = \"qazwsxedcrfvtgbyhnujmikolpZAQXSWCDEVFRBGTNHYMJUKILOP\";\r",
-									"    const characters = \"ZAQXSWCDEVFRBGTNHYMJUKILOPqazwsxedcrfvtgbyhnujmikolp0123456789\"; \r",
-									"    const protocol = [\"https://www.\", \"http://\", \"https://\"];\r",
-									"\r",
-									"    const length2 = Math.floor(Math.random() * 3) + 5;\r",
-									"    const length3 = Math.floor(Math.random() * 1) + 2;\r",
-									"    let tld = \"\";\r",
-									"    let sld = \"\";\r",
-									"\r",
-									"    sld += letters.charAt(Math.floor(Math.random() * letters.length));\r",
-									"\r",
-									"    for (let i = 1; i < length2; i++) {\r",
-									"        sld += characters.charAt(Math.floor(Math.random() * characters.length));\r",
-									"    } \r",
-									"\r",
-									"    for (let i = 0; i < length3; i++) {\r",
-									"        tld += letters.charAt(Math.floor(Math.random() * letters.length));\r",
-									"    }\r",
-									"\r",
-									"    const Randomprotocol = protocol[(Math.floor(Math.random() * protocol.length))];\r",
-									"\r",
-									"    return Randomprotocol + sld + \".\" + tld;\r",
-									"}\r",
-									"\r",
-									"// Generate and store variables in Postman environment\r",
-									"pm.environment.set(\"contact_email\", getRandomemail());\r",
-									"pm.environment.set(\"name_supplier\", getRandomNameSupplier());\r",
-									"pm.environment.set(\"contact_name\", getRandomContactName());\r",
-									"pm.environment.set(\"phone_number\", getRandomPhoneNumber());\r",
-									"pm.environment.set(\"address\", getRandomAddress());\r",
-									"pm.environment.set(\"country\", getRandomCountry());\r",
-									"pm.environment.set(\"city\", getRandomCity());\r",
-									"pm.environment.set(\"website\", getRandomWebSite());\r",
-									"\r",
-									"// Get values from the environment\r",
-									"const contact_email = pm.environment.get(\"contact_email\");\r",
-									"const name_supplier = pm.environment.get(\"name_supplier\");\r",
-									"const contact_name = pm.environment.get(\"contact_name\");\r",
-									"const phone_number = pm.environment.get(\"phone_number\");\r",
-									"const address = pm.environment.get(\"address\");\r",
-									"const country = pm.environment.get(\"country\");\r",
-									"const city = pm.environment.get(\"city\");\r",
-									"const website = pm.environment.get(\"website\");\r",
-									"\r",
-									"// Log to console\r",
-									"console.log({\r",
-									"    \"name\": name_supplier, \r",
-									"    \"contact_name\": contact_name, \r",
-									"    \"contact_email\": contact_email, \r",
-									"    \"phone_number\": phone_number, \r",
-									"    \"address\": address, \r",
-									"    \"country\": country, \r",
-									"    \"city\": city, \r",
-									"    \"website\": website\r",
-									"});\r",
-									"\r",
-									"\r",
-									""
-								]
-							}
-						},
-						{
-							"listen": "test",
-							"script": {
-								"type": "text/javascript",
-								"packages": {},
-								"exec": [
-									""
-								]
-							}
+							]
 						}
 					]
 				}
@@ -5248,7 +5131,7 @@
 			"name": "additionalChecks",
 			"item": [
 				{
-					"name": "getPendingProducts",
+					"name": "getPendingProducts_200",
 					"request": {
 						"method": "GET",
 						"header": [
@@ -5311,7 +5194,7 @@
 			"name": "Chats",
 			"item": [
 				{
-					"name": "creationChat",
+					"name": "create_chat_200",
 					"event": [
 						{
 							"listen": "test",
@@ -5354,7 +5237,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{ \"name\": \"chatAddUser\",\r\n\"is_group\": \"0\",\r\n\"participants\": [\"{{userID}}\", \"abe58ba5-59d6-475c-b66f-c4739ee73a65\"]\r\n}\r\n//\"87c2a5d4-970d-44ce-a7a0-3cfab07172e6\"",
+							"raw": "{ \"name\": \"chatPersonal\",\r\n\"is_group\": \"0\",\r\n\"participants\": [\"{{userID}}\", \"39182128-db56-4388-87f6-0407cc7ce5d7\"]\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -5376,13 +5259,13 @@
 					"response": []
 				},
 				{
-					"name": "addUsersToChat",
+					"name": "add_user_to_chat_200",
 					"event": [
 						{
 							"listen": "test",
 							"script": {
 								"exec": [
-									"pm.test(\"The chat was cteated\", function(){\r",
+									"pm.test(\"The user was added\", function(){\r",
 									"    pm.response.to.have.status(200);\r",
 									"});"
 								],
@@ -5420,7 +5303,7 @@
 							}
 						},
 						"url": {
-							"raw": "http://localhost:8004/chats/add_user?chat_id={{chatId}}&user_id={{userID}}&user_id=74359b0e-743f-4d55-b1fc-9f94f696d990&user_id=238286ab-4d7e-4ef0-9c4b-25cf17392be1&user_id=fc893f3a-03bd-4064-88c6-9a9760348431",
+							"raw": "http://localhost:8004/chats/add_user?chat_id={{chatId}}&user_id={{userID}}&user_id=74359b0e-743f-4d55-b1fc-9f94f696d990&user_id=286c9e8b-6ca6-4757-b659-d271966cdd6d&user_id=fc893f3a-03bd-4064-88c6-9a9760348431&user_id=7cadfa5e-f518-4e01-b498-6d5cf9143c88",
 							"protocol": "http",
 							"host": [
 								"localhost"
@@ -5445,11 +5328,15 @@
 								},
 								{
 									"key": "user_id",
-									"value": "238286ab-4d7e-4ef0-9c4b-25cf17392be1"
+									"value": "286c9e8b-6ca6-4757-b659-d271966cdd6d"
 								},
 								{
 									"key": "user_id",
 									"value": "fc893f3a-03bd-4064-88c6-9a9760348431"
+								},
+								{
+									"key": "user_id",
+									"value": "7cadfa5e-f518-4e01-b498-6d5cf9143c88"
 								}
 							]
 						}
@@ -5457,7 +5344,7 @@
 					"response": []
 				},
 				{
-					"name": "creationChatsc404",
+					"name": "create_chat_with_non_existing_user_404",
 					"event": [
 						{
 							"listen": "test",
@@ -5506,7 +5393,7 @@
 					"response": []
 				},
 				{
-					"name": "retrievingChats",
+					"name": "retrieve_chats_200",
 					"event": [
 						{
 							"listen": "test",
@@ -5547,18 +5434,34 @@
 					"response": []
 				},
 				{
-					"name": "retrievingChatsById",
+					"name": "retrieve_chats_by_id_200",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"The chats was retrieved successfully\", function() {\r",
+									"pm.response.to.have.status(200);    \r",
+									"});\r",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
 					"request": {
 						"method": "GET",
 						"header": [
 							{
 								"key": "Authorization",
 								"value": "Bearer {{accessToken}}",
-								"type": "text"
+								"type": "text",
+								"disabled": true
 							}
 						],
 						"url": {
-							"raw": "http://localhost:8004/chats/{{chatId}}",
+							"raw": "http://localhost:8004/chats/0a762b97-8f13-468b-93b3-42226c9402d1",
 							"protocol": "http",
 							"host": [
 								"localhost"
@@ -5566,14 +5469,29 @@
 							"port": "8004",
 							"path": [
 								"chats",
-								"{{chatId}}"
+								"0a762b97-8f13-468b-93b3-42226c9402d1"
 							]
 						}
 					},
 					"response": []
 				},
 				{
-					"name": "RetrievingMessages",
+					"name": "retrieve_massges_from_chat_200",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"The messages was retrieved successfully\", function() {\r",
+									"pm.response.to.have.status(200);    \r",
+									"});\r",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
 					"request": {
 						"method": "GET",
 						"header": [
@@ -5600,7 +5518,22 @@
 					"response": []
 				},
 				{
-					"name": "addinMessageOnChat",
+					"name": "add_message_to_chat_200",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"The messages was added to chat successfully\", function() {\r",
+									"pm.response.to.have.status(200);    \r",
+									"});\r",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
 					"request": {
 						"method": "POST",
 						"header": [
@@ -5612,7 +5545,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"chat_id\": \"{{chatId}}\",\r\n  \"content\": \"chat test websocket\"\r\n}",
+							"raw": "{\r\n  \"chat_id\": \"{{chatId}}\",\r\n  \"content\": \"5951812469233937670017238x461901x74589172606876685643861990691998289230244141717723945671515728889315951812469233937670017238x461901x74589172606876685643861990691998289230244141717723945671515728889315951812469233937670017238x461901x74589172606876685643861990691998289230244141717723945671515728889315951812469233937670017238x461901x74589172606876685643861990691998289230244141717723945671515728889315951812469233937670017238x461901x74589172606876685643861990691998289230244141717723945671515728889315951812469233937670017238x461901x74589172606876685643861990691998289230244141717723945671515728889315951812469233937670017238x461901x74589172606876685643861990691998289230244141717723945671515728889315951812469233937670017238x461901x74589172606876685643861990691998289230244141717723945671515728889315951812469233937670017238x461901x74589172606876685643861990691998289230244141717723945671515728889315951812469233937670017238x461901x7458917260687668564386199069199828923024414171772394567151572888931y\"\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
