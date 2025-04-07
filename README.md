@@ -35,6 +35,6 @@ This collection can serve as a foundation for developers looking to build their 
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/your-username/postman-api-template.git
+git clone https://github.com/VoElenaS/API-Testing-with-Postman.git
 cd postman-api-template
 
