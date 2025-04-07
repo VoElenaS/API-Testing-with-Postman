@@ -37,4 +37,12 @@ This collection can serve as a foundation for developers looking to build their 
 ```bash
 git clone https://github.com/VoElenaS/API-Testing-with-Postman.git
 cd postman-api-template
+```
+
+### 2. Import the Collection into Postman
+Open Postman
+
+Click "Import"
+
+Select the collection.json file from this repo
 
